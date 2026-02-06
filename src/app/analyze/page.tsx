@@ -1,77 +1,76 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Suspense } from "react";
+import { Textarea } from "@/components/ui/textarea";
 
 function AnalyzeForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id");
-  
-  const [resume, setResume] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+	const router = useRouter();
+	const searchParams = useSearchParams();
+	const sessionId = searchParams.get("session_id");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!resume.trim() || !jobDescription.trim()) {
-      setError("Please fill in both fields");
-      return;
-    }
+	const [resume, setResume] = useState("");
+	const [jobDescription, setJobDescription] = useState("");
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
-    setLoading(true);
-    setError(null);
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
 
-    try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          resume, 
-          jobDescription,
-          sessionId 
-        }),
-      });
+		if (!resume.trim() || !jobDescription.trim()) {
+			setError("Please fill in both fields");
+			return;
+		}
 
-      const data = await res.json();
+		setLoading(true);
+		setError(null);
 
-      if (data.id) {
-        router.push(`/results/${data.id}`);
-      } else {
-        setError(data.error || "Analysis failed");
-      }
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+		try {
+			const res = await fetch("/api/analyze", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					resume,
+					jobDescription,
+					sessionId,
+				}),
+			});
 
-  return (
-    <main className="min-h-screen p-4 py-12">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold">Time for your roast 🔥</h1>
-          <p className="text-zinc-400">Paste your resume and the job description below</p>
-        </div>
+			const data = await res.json();
 
-        <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-6">
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-zinc-100">Your Resume</CardTitle>
-              <CardDescription>Paste your entire resume text</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={resume}
-                onChange={(e) => setResume(e.target.value)}
-                placeholder="Paste your resume here...
+			if (data.id) {
+				router.push(`/results/${data.id}`);
+			} else {
+				setError(data.error || "Analysis failed");
+			}
+		} catch {
+			setError("Something went wrong. Please try again.");
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	return (
+		<main className="min-h-screen p-4 py-12">
+			<div className="max-w-4xl mx-auto space-y-8">
+				<div className="text-center space-y-2">
+					<h1 className="text-3xl font-bold">Time for your roast 🔥</h1>
+					<p className="text-zinc-400">Paste your resume and the job description below</p>
+				</div>
+
+				<form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-6">
+					<Card className="bg-zinc-900 border-zinc-800">
+						<CardHeader>
+							<CardTitle className="text-zinc-100">Your Resume</CardTitle>
+							<CardDescription>Paste your entire resume text</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<Textarea
+								value={resume}
+								onChange={(e) => setResume(e.target.value)}
+								placeholder="Paste your resume here...
 
 Example:
 John Doe
@@ -81,21 +80,21 @@ Software Engineer
 Work Experience:
 - Senior Dev at TechCorp (2020-2023)
 ..."
-                className="min-h-[400px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              />
-            </CardContent>
-          </Card>
+								className="min-h-[400px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+							/>
+						</CardContent>
+					</Card>
 
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-zinc-100">Job Description</CardTitle>
-              <CardDescription>Paste the full job posting</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                placeholder="Paste the job description here...
+					<Card className="bg-zinc-900 border-zinc-800">
+						<CardHeader>
+							<CardTitle className="text-zinc-100">Job Description</CardTitle>
+							<CardDescription>Paste the full job posting</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<Textarea
+								value={jobDescription}
+								onChange={(e) => setJobDescription(e.target.value)}
+								placeholder="Paste the job description here...
 
 Example:
 Senior Software Engineer
@@ -107,35 +106,35 @@ Requirements:
 - 7+ years experience
 - Expert in Python, Go, Kubernetes
 ..."
-                className="min-h-[400px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              />
-            </CardContent>
-          </Card>
+								className="min-h-[400px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+							/>
+						</CardContent>
+					</Card>
 
-          <div className="md:col-span-2 space-y-4">
-            {error && (
-              <p className="text-red-400 text-center">{error}</p>
-            )}
-            
-            <Button 
-              type="submit"
-              disabled={loading}
-              size="lg" 
-              className="w-full bg-red-600 hover:bg-red-700 text-white text-lg py-6"
-            >
-              {loading ? "Analyzing your failures..." : "Roast Me 🔥"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </main>
-  );
+					<div className="md:col-span-2 space-y-4">
+						{error && <p className="text-red-400 text-center">{error}</p>}
+
+						<Button
+							type="submit"
+							disabled={loading}
+							size="lg"
+							className="w-full bg-red-600 hover:bg-red-700 text-white text-lg py-6"
+						>
+							{loading ? "Analyzing your failures..." : "Roast Me 🔥"}
+						</Button>
+					</div>
+				</form>
+			</div>
+		</main>
+	);
 }
 
 export default function AnalyzePage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
-      <AnalyzeForm />
-    </Suspense>
-  );
+	return (
+		<Suspense
+			fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}
+		>
+			<AnalyzeForm />
+		</Suspense>
+	);
 }
