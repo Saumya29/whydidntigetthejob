@@ -4,7 +4,7 @@ import { ShareButtons } from "@/components/share-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getResult } from "@/lib/storage";
+import { getResult, type AnalysisResult, type SkillGap, type Priority, type RecruiterNote } from "@/lib/storage";
 
 interface Props {
 	params: Promise<{ id: string }>;
@@ -17,9 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const result = await getResult(id);
 
 	if (!result) {
-		return {
-			title: "Results Not Found | WhyDidntIGetTheJob",
-		};
+		return { title: "Results Not Found | WhyDidntIGetTheJob" };
 	}
 
 	const title = `Roast Grade: ${result.grade} | WhyDidntIGetTheJob`;
@@ -34,14 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 			description,
 			type: "website",
 			url: `${BASE_URL}/results/${id}`,
-			images: [
-				{
-					url: ogImageUrl,
-					width: 1200,
-					height: 630,
-					alt: `Job rejection analysis - Grade ${result.grade}`,
-				},
-			],
+			images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `Job rejection analysis - Grade ${result.grade}` }],
 		},
 		twitter: {
 			card: "summary_large_image",
@@ -50,6 +41,155 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 			images: [ogImageUrl],
 		},
 	};
+}
+
+// Grade color mapping
+const gradeColors: Record<string, { bg: string; text: string; ring: string }> = {
+	"A+": { bg: "bg-emerald-500", text: "text-emerald-400", ring: "ring-emerald-500/30" },
+	A: { bg: "bg-green-500", text: "text-green-400", ring: "ring-green-500/30" },
+	"A-": { bg: "bg-green-500", text: "text-green-400", ring: "ring-green-500/30" },
+	"B+": { bg: "bg-lime-500", text: "text-lime-400", ring: "ring-lime-500/30" },
+	B: { bg: "bg-lime-500", text: "text-lime-400", ring: "ring-lime-500/30" },
+	"B-": { bg: "bg-yellow-500", text: "text-yellow-400", ring: "ring-yellow-500/30" },
+	"C+": { bg: "bg-yellow-500", text: "text-yellow-400", ring: "ring-yellow-500/30" },
+	C: { bg: "bg-yellow-500", text: "text-yellow-400", ring: "ring-yellow-500/30" },
+	"C-": { bg: "bg-orange-500", text: "text-orange-400", ring: "ring-orange-500/30" },
+	"D+": { bg: "bg-orange-500", text: "text-orange-400", ring: "ring-orange-500/30" },
+	D: { bg: "bg-orange-600", text: "text-orange-400", ring: "ring-orange-500/30" },
+	"D-": { bg: "bg-red-500", text: "text-red-400", ring: "ring-red-500/30" },
+	F: { bg: "bg-red-600", text: "text-red-400", ring: "ring-red-500/30" },
+};
+
+function getGradeStyle(grade: string) {
+	return gradeColors[grade] || gradeColors["C"];
+}
+
+// Skill Gap Heatmap Component
+function SkillGapHeatmap({ skills }: { skills: SkillGap[] }) {
+	const statusColors = {
+		missing: { bg: "bg-red-500/20", border: "border-red-500/40", text: "text-red-400", label: "Missing" },
+		weak: { bg: "bg-yellow-500/20", border: "border-yellow-500/40", text: "text-yellow-400", label: "Weak" },
+		strong: { bg: "bg-green-500/20", border: "border-green-500/40", text: "text-green-400", label: "Strong" },
+	};
+
+	return (
+		<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+			{skills.map((skill, i) => {
+				const colors = statusColors[skill.status];
+				return (
+					<div
+						key={i}
+						className={`${colors.bg} ${colors.border} border rounded-lg p-3 flex items-center justify-between`}
+					>
+						<span className="text-zinc-200 text-sm font-medium">{skill.skill}</span>
+						<span className={`${colors.text} text-xs font-semibold uppercase`}>{colors.label}</span>
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
+// Priority List Component
+function PriorityList({ priorities }: { priorities: Priority[] }) {
+	const effortColors = { Low: "text-green-400", Medium: "text-yellow-400", High: "text-red-400" };
+	const impactColors = { Low: "text-zinc-400", Medium: "text-yellow-400", High: "text-green-400" };
+
+	return (
+		<div className="space-y-4">
+			{priorities.map((p) => (
+				<div key={p.rank} className="bg-zinc-800/50 rounded-lg p-4 border border-zinc-700/50">
+					<div className="flex items-start gap-3">
+						<span className="bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+							{p.rank}
+						</span>
+						<div className="flex-1 min-w-0">
+							<p className="text-zinc-100 font-medium">{p.issue}</p>
+							<p className="text-zinc-400 text-sm mt-1">{p.action}</p>
+							<div className="flex gap-4 mt-2 text-xs">
+								<span>
+									Effort: <span className={effortColors[p.effort]}>{p.effort}</span>
+								</span>
+								<span>
+									Impact: <span className={impactColors[p.impact]}>{p.impact}</span>
+								</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			))}
+		</div>
+	);
+}
+
+// Recruiter Notes Component
+function RecruiterNotesSection({ notes }: { notes: RecruiterNote[] }) {
+	return (
+		<div className="space-y-3">
+			{notes.map((note, i) => (
+				<div key={i} className="border-l-2 border-zinc-700 pl-4 py-1">
+					<p className="text-zinc-500 text-xs uppercase tracking-wide mb-1">{note.section}</p>
+					<p className="text-zinc-300 text-sm italic">&ldquo;{note.note}&rdquo;</p>
+				</div>
+			))}
+		</div>
+	);
+}
+
+// Competition Score Component
+function CompetitionScore({ competition }: { competition: AnalysisResult["competition"] }) {
+	const levelColors = {
+		Low: "text-green-400",
+		Medium: "text-yellow-400",
+		High: "text-orange-400",
+		Extreme: "text-red-400",
+	};
+
+	return (
+		<div className="grid grid-cols-2 gap-4">
+			<div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+				<p className="text-3xl font-bold text-white">~{competition.estimatedApplicants}</p>
+				<p className="text-zinc-400 text-sm">Est. Applicants</p>
+			</div>
+			<div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+				<p className="text-3xl font-bold text-white">#{competition.estimatedRank}</p>
+				<p className="text-zinc-400 text-sm">Your Est. Rank</p>
+			</div>
+			<div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+				<p className="text-3xl font-bold text-white">{competition.percentile}%</p>
+				<p className="text-zinc-400 text-sm">Percentile</p>
+			</div>
+			<div className="bg-zinc-800/50 rounded-lg p-4 text-center">
+				<p className={`text-2xl font-bold ${levelColors[competition.competitionLevel]}`}>
+					{competition.competitionLevel}
+				</p>
+				<p className="text-zinc-400 text-sm">Competition</p>
+			</div>
+		</div>
+	);
+}
+
+// Bullet Rewrite Component
+function BulletRewriteSection({ rewrite }: { rewrite: AnalysisResult["bulletRewrite"] }) {
+	if (!rewrite) return null;
+
+	return (
+		<div className="space-y-4">
+			<div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+				<p className="text-red-400 text-xs uppercase tracking-wide mb-2">❌ Before (Your Version)</p>
+				<p className="text-zinc-300">&ldquo;{rewrite.before}&rdquo;</p>
+			</div>
+			<div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+				<p className="text-green-400 text-xs uppercase tracking-wide mb-2">✓ After (Improved)</p>
+				<p className="text-zinc-100 font-medium">&ldquo;{rewrite.after}&rdquo;</p>
+			</div>
+			<div className="bg-zinc-800/50 rounded-lg p-3">
+				<p className="text-zinc-400 text-sm">
+					<span className="text-zinc-300 font-medium">Why it&apos;s better:</span> {rewrite.why}
+				</p>
+			</div>
+		</div>
+	);
 }
 
 export default async function ResultsPage({ params }: Props) {
@@ -70,88 +210,134 @@ export default async function ResultsPage({ params }: Props) {
 		);
 	}
 
-	const gradeColors: Record<string, string> = {
-		A: "bg-green-500",
-		B: "bg-lime-500",
-		C: "bg-yellow-500",
-		D: "bg-orange-500",
-		F: "bg-red-500",
-	};
+	const gradeStyle = getGradeStyle(result.grade);
 
 	return (
-		<main className="min-h-screen p-4 py-12">
-			<div className="max-w-3xl mx-auto space-y-8">
+		<main className="min-h-screen p-4 py-8 md:py-12">
+			<div className="max-w-3xl mx-auto space-y-6">
 				{/* Header */}
-				<div className="text-center space-y-4">
+				<div className="text-center space-y-2">
 					<Badge variant="outline" className="text-red-400 border-red-400/50">
-						Your Rejection Letter
+						Your $7 Reality Check
 					</Badge>
-					<h1 className="text-3xl font-bold">The Verdict Is In</h1>
+					<h1 className="text-2xl md:text-3xl font-bold">The Verdict Is In</h1>
 				</div>
 
-				{/* Grade Card - Screenshot friendly */}
-				<Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 overflow-hidden">
-					<div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent" />
-					<CardContent className="p-8 relative">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-zinc-400 text-sm uppercase tracking-wider">Roast Grade</p>
-								<p className="text-6xl font-bold mt-2">{result.grade}</p>
+				{/* 1. GRADE CARD - Big and prominent */}
+				<Card className={`bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 overflow-hidden ring-2 ${gradeStyle.ring}`}>
+					<CardContent className="p-6 md:p-8">
+						<div className="flex items-center justify-between gap-4">
+							<div className="flex-1">
+								<p className="text-zinc-500 text-xs uppercase tracking-wider">Roast Grade</p>
+								<p className={`text-5xl md:text-6xl font-black mt-1 ${gradeStyle.text}`}>{result.grade}</p>
 							</div>
-							<div
-								className={`w-24 h-24 rounded-full ${gradeColors[result.grade] || "bg-zinc-500"} flex items-center justify-center`}
-							>
-								<span className="text-4xl font-bold text-white">{result.grade}</span>
+							<div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl ${gradeStyle.bg} flex items-center justify-center shadow-lg`}>
+								<span className="text-3xl md:text-4xl font-black text-white">{result.grade}</span>
 							</div>
 						</div>
-
-						<div className="mt-6 pt-6 border-t border-zinc-800">
-							<p className="text-xl text-zinc-300 italic">&ldquo;{result.headline}&rdquo;</p>
+						<div className="mt-4 pt-4 border-t border-zinc-800">
+							<p className="text-lg md:text-xl text-zinc-300 italic">&ldquo;{result.headline}&rdquo;</p>
 						</div>
 					</CardContent>
 				</Card>
 
-				{/* Detailed Feedback */}
+				{/* 2. COMPETITION SCORE */}
+				{result.competition && (
+					<Card className="bg-zinc-900 border-zinc-800">
+						<CardHeader className="pb-2">
+							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
+								📊 Competition Analysis
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<CompetitionScore competition={result.competition} />
+						</CardContent>
+					</Card>
+				)}
+
+				{/* 3. SKILL GAP HEATMAP */}
+				{result.skillGapHeatmap && result.skillGapHeatmap.length > 0 && (
+					<Card className="bg-zinc-900 border-zinc-800">
+						<CardHeader className="pb-2">
+							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
+								🎯 Skill Gap Analysis
+							</CardTitle>
+							<p className="text-zinc-500 text-sm">JD requirements vs your resume</p>
+						</CardHeader>
+						<CardContent>
+							<SkillGapHeatmap skills={result.skillGapHeatmap} />
+						</CardContent>
+					</Card>
+				)}
+
+				{/* 4. FIX THIS FIRST - Priority List */}
+				{result.priorities && result.priorities.length > 0 && (
+					<Card className="bg-zinc-900 border-zinc-800">
+						<CardHeader className="pb-2">
+							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
+								🚨 Fix This First
+							</CardTitle>
+							<p className="text-zinc-500 text-sm">Ranked by impact</p>
+						</CardHeader>
+						<CardContent>
+							<PriorityList priorities={result.priorities} />
+						</CardContent>
+					</Card>
+				)}
+
+				{/* 5. BULLET REWRITE - Free sample */}
+				{result.bulletRewrite && (
+					<Card className="bg-zinc-900 border-zinc-800">
+						<CardHeader className="pb-2">
+							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
+								✨ Free Rewrite
+							</CardTitle>
+							<p className="text-zinc-500 text-sm">Your worst bullet, fixed</p>
+						</CardHeader>
+						<CardContent>
+							<BulletRewriteSection rewrite={result.bulletRewrite} />
+						</CardContent>
+					</Card>
+				)}
+
+				{/* 6. RECRUITER NOTES */}
+				{result.recruiterNotes && result.recruiterNotes.length > 0 && (
+					<Card className="bg-zinc-900 border-zinc-800">
+						<CardHeader className="pb-2">
+							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
+								📝 What the Recruiter Actually Thought
+							</CardTitle>
+							<p className="text-zinc-500 text-sm">Internal notes (simulated)</p>
+						</CardHeader>
+						<CardContent>
+							<RecruiterNotesSection notes={result.recruiterNotes} />
+						</CardContent>
+					</Card>
+				)}
+
+				{/* 7. THE BRUTAL TRUTH */}
 				<Card className="bg-zinc-900 border-zinc-800">
-					<CardHeader>
-						<CardTitle className="text-zinc-100 flex items-center gap-2">
+					<CardHeader className="pb-2">
+						<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
 							🔥 The Brutal Truth
 						</CardTitle>
 					</CardHeader>
-					<CardContent className="space-y-6">
-						{/* Why you didn't get it */}
-						<div>
-							<h3 className="font-semibold text-red-400 mb-2">Why You Got Rejected</h3>
-							<p className="text-zinc-300 whitespace-pre-wrap">{result.rejection}</p>
-						</div>
-
-						{/* Skill gaps */}
-						<div>
-							<h3 className="font-semibold text-orange-400 mb-2">Skill Gaps</h3>
-							<ul className="space-y-2">
-								{result.skillGaps.map((gap: string, i: number) => (
-									<li key={i} className="flex items-start gap-2 text-zinc-300">
-										<span className="text-orange-400">•</span>
-										{gap}
-									</li>
-								))}
-							</ul>
-						</div>
-
-						{/* What they probably said */}
+					<CardContent className="space-y-4">
+						<p className="text-zinc-300 whitespace-pre-wrap leading-relaxed">{result.rejection}</p>
+						
 						<div className="bg-zinc-950 rounded-lg p-4 border border-zinc-800">
-							<h3 className="font-semibold text-zinc-400 mb-2 text-sm uppercase">
-								What the hiring manager probably said:
-							</h3>
+							<p className="text-zinc-500 text-xs uppercase tracking-wide mb-2">
+								Hiring manager&apos;s hot take:
+							</p>
 							<p className="text-zinc-300 italic">&ldquo;{result.hiringManagerQuote}&rdquo;</p>
 						</div>
 					</CardContent>
 				</Card>
 
-				{/* Improvement Tips */}
+				{/* 8. HOW TO ACTUALLY GET HIRED */}
 				<Card className="bg-zinc-900 border-zinc-800">
-					<CardHeader>
-						<CardTitle className="text-zinc-100 flex items-center gap-2">
+					<CardHeader className="pb-2">
+						<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
 							💡 How to Actually Get Hired
 						</CardTitle>
 					</CardHeader>
@@ -169,19 +355,17 @@ export default async function ResultsPage({ params }: Props) {
 					</CardContent>
 				</Card>
 
-				{/* Share Section */}
+				{/* SHARE SECTION */}
 				<div className="text-center space-y-4 pt-4">
 					<p className="text-zinc-400">Share your roast (if you dare)</p>
 					<ShareButtons grade={result.grade} url={`${BASE_URL}/results/${id}`} />
 				</div>
 
 				{/* CTA */}
-				<div className="text-center pt-8 border-t border-zinc-800">
+				<div className="text-center pt-6 border-t border-zinc-800">
 					<p className="text-zinc-500 mb-4">Got another rejection to process?</p>
 					<Link href="/">
-						<Button variant="outline" className="border-zinc-700 hover:bg-zinc-800">
-							Get Roasted Again
-						</Button>
+						<Button className="bg-red-600 hover:bg-red-700">Get Roasted Again — $7</Button>
 					</Link>
 				</div>
 			</div>

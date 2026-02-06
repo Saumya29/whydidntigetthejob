@@ -1,14 +1,53 @@
 // Simple in-memory storage for MVP (replace with DB later)
 // In production, use Redis, Postgres, or similar
 
-interface AnalysisResult {
+export interface RecruiterNote {
+	section: string;
+	note: string;
+}
+
+export interface SkillGap {
+	skill: string;
+	status: "missing" | "weak" | "strong";
+	jdMention: boolean;
+	resumeMention: boolean;
+}
+
+export interface Priority {
+	rank: number;
+	issue: string;
+	effort: "Low" | "Medium" | "High";
+	impact: "Low" | "Medium" | "High";
+	action: string;
+}
+
+export interface Competition {
+	estimatedApplicants: number;
+	estimatedRank: number;
+	percentile: number;
+	competitionLevel: "Low" | "Medium" | "High" | "Extreme";
+}
+
+export interface BulletRewrite {
+	before: string;
+	after: string;
+	why: string;
+}
+
+export interface AnalysisResult {
 	id: string;
 	grade: string;
 	headline: string;
 	rejection: string;
-	skillGaps: string[];
+	recruiterNotes: RecruiterNote[];
+	skillGapHeatmap: SkillGap[];
+	priorities: Priority[];
+	competition: Competition;
+	bulletRewrite: BulletRewrite | null;
 	hiringManagerQuote: string;
 	improvements: string[];
+	// Legacy
+	skillGaps: string[];
 	createdAt: Date;
 }
 
