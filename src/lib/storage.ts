@@ -34,6 +34,19 @@ export interface BulletRewrite {
 	why: string;
 }
 
+export interface ATSIssue {
+	category: "Keywords" | "Formatting" | "Sections" | "Length" | "Contact Info";
+	issue: string;
+	severity: "Critical" | "Warning" | "Minor";
+}
+
+export interface ATSScore {
+	score: number;
+	issues: ATSIssue[];
+	missingKeywords: string[];
+	tips: string[];
+}
+
 export interface AnalysisResult {
 	id: string;
 	grade: string;
@@ -44,6 +57,7 @@ export interface AnalysisResult {
 	priorities: Priority[];
 	competition: Competition;
 	bulletRewrite: BulletRewrite | null;
+	atsScore: ATSScore;
 	hiringManagerQuote: string;
 	improvements: string[];
 	// Legacy

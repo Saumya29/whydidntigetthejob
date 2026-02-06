@@ -72,6 +72,15 @@ Provide your analysis in the following JSON format:
     "why": "Brief explanation of what makes the new version better"
   },
   
+  "atsScore": {
+    "score": number (0-100, how well this resume would pass ATS systems),
+    "issues": [
+      { "category": "Keywords" | "Formatting" | "Sections" | "Length" | "Contact Info", "issue": "Specific ATS issue", "severity": "Critical" | "Warning" | "Minor" }
+    ],
+    "missingKeywords": ["Array of important keywords from JD missing in resume"],
+    "tips": ["Array of 3 ATS optimization tips"]
+  },
+  
   "hiringManagerQuote": "What the hiring manager probably said (funny, realistic)",
   "improvements": ["Array of 4-5 specific, actionable improvement tips"]
 }
@@ -113,6 +122,7 @@ Be savage but helpful. Make it entertaining AND genuinely useful. The candidate 
 			priorities: analysis.priorities || [],
 			competition: analysis.competition || { estimatedApplicants: 150, estimatedRank: 75, percentile: 50, competitionLevel: "Medium" },
 			bulletRewrite: analysis.bulletRewrite || null,
+			atsScore: analysis.atsScore || { score: 50, issues: [], missingKeywords: [], tips: [] },
 			hiringManagerQuote: analysis.hiringManagerQuote,
 			improvements: analysis.improvements,
 			// Legacy fields for backwards compat

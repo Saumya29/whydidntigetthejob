@@ -4,7 +4,7 @@ import { ShareButtons } from "@/components/share-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getResult, type AnalysisResult, type SkillGap, type Priority, type RecruiterNote } from "@/lib/storage";
+import { getResult, type AnalysisResult, type SkillGap, type Priority, type RecruiterNote, type ATSScore } from "@/lib/storage";
 
 interface Props {
 	params: Promise<{ id: string }>;
@@ -169,6 +169,84 @@ function CompetitionScore({ competition }: { competition: AnalysisResult["compet
 	);
 }
 
+// ATS Score Component
+function ATSScoreSection({ ats }: { ats: ATSScore }) {
+	const getScoreColor = (score: number) => {
+		if (score >= 80) return "text-green-400";
+		if (score >= 60) return "text-yellow-400";
+		if (score >= 40) return "text-orange-400";
+		return "text-red-400";
+	};
+
+	const getScoreBg = (score: number) => {
+		if (score >= 80) return "from-green-500/20 to-green-500/5";
+		if (score >= 60) return "from-yellow-500/20 to-yellow-500/5";
+		if (score >= 40) return "from-orange-500/20 to-orange-500/5";
+		return "from-red-500/20 to-red-500/5";
+	};
+
+	const severityColors = {
+		Critical: "bg-red-500/20 text-red-400 border-red-500/30",
+		Warning: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+		Minor: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
+	};
+
+	return (
+		<div className="space-y-4">
+			{/* Score Display */}
+			<div className={`bg-gradient-to-r ${getScoreBg(ats.score)} rounded-xl p-6 text-center`}>
+				<p className={`text-6xl font-black ${getScoreColor(ats.score)}`}>{ats.score}</p>
+				<p className="text-zinc-400 text-sm mt-1">ATS Compatibility Score</p>
+			</div>
+
+			{/* Issues */}
+			{ats.issues && ats.issues.length > 0 && (
+				<div className="space-y-2">
+					<p className="text-zinc-500 text-xs uppercase tracking-wide">Issues Found</p>
+					{ats.issues.map((issue, i) => (
+						<div key={i} className={`${severityColors[issue.severity]} border rounded-lg p-3 flex items-start gap-3`}>
+							<span className="text-xs font-semibold uppercase flex-shrink-0">{issue.severity}</span>
+							<div>
+								<span className="text-zinc-300 text-sm font-medium">{issue.category}:</span>
+								<span className="text-zinc-400 text-sm ml-1">{issue.issue}</span>
+							</div>
+						</div>
+					))}
+				</div>
+			)}
+
+			{/* Missing Keywords */}
+			{ats.missingKeywords && ats.missingKeywords.length > 0 && (
+				<div>
+					<p className="text-zinc-500 text-xs uppercase tracking-wide mb-2">Missing Keywords</p>
+					<div className="flex flex-wrap gap-2">
+						{ats.missingKeywords.map((keyword, i) => (
+							<span key={i} className="bg-red-500/10 text-red-400 text-xs px-2 py-1 rounded border border-red-500/20">
+								{keyword}
+							</span>
+						))}
+					</div>
+				</div>
+			)}
+
+			{/* Tips */}
+			{ats.tips && ats.tips.length > 0 && (
+				<div>
+					<p className="text-zinc-500 text-xs uppercase tracking-wide mb-2">ATS Optimization Tips</p>
+					<ul className="space-y-2">
+						{ats.tips.map((tip, i) => (
+							<li key={i} className="flex items-start gap-2 text-zinc-300 text-sm">
+								<span className="text-green-400">💡</span>
+								{tip}
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+		</div>
+	);
+}
+
 // Bullet Rewrite Component
 function BulletRewriteSection({ rewrite }: { rewrite: AnalysisResult["bulletRewrite"] }) {
 	if (!rewrite) return null;
@@ -241,7 +319,22 @@ export default async function ResultsPage({ params }: Props) {
 					</CardContent>
 				</Card>
 
-				{/* 2. COMPETITION SCORE */}
+				{/* 2. ATS SCORE */}
+				{result.atsScore && (
+					<Card className="bg-zinc-900 border-zinc-800">
+						<CardHeader className="pb-2">
+							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
+								🤖 ATS Compatibility
+							</CardTitle>
+							<p className="text-zinc-500 text-sm">How well your resume passes automated screening</p>
+						</CardHeader>
+						<CardContent>
+							<ATSScoreSection ats={result.atsScore} />
+						</CardContent>
+					</Card>
+				)}
+
+				{/* 3. COMPETITION SCORE */}
 				{result.competition && (
 					<Card className="bg-zinc-900 border-zinc-800">
 						<CardHeader className="pb-2">
@@ -255,7 +348,7 @@ export default async function ResultsPage({ params }: Props) {
 					</Card>
 				)}
 
-				{/* 3. SKILL GAP HEATMAP */}
+				{/* 4. SKILL GAP HEATMAP */}
 				{result.skillGapHeatmap && result.skillGapHeatmap.length > 0 && (
 					<Card className="bg-zinc-900 border-zinc-800">
 						<CardHeader className="pb-2">
@@ -355,11 +448,27 @@ export default async function ResultsPage({ params }: Props) {
 					</CardContent>
 				</Card>
 
-				{/* SHARE SECTION */}
-				<div className="text-center space-y-4 pt-4">
-					<p className="text-zinc-400">Share your roast (if you dare)</p>
-					<ShareButtons grade={result.grade} url={`${BASE_URL}/results/${id}`} />
-				</div>
+				{/* DOWNLOAD & SHARE SECTION */}
+				<Card className="bg-zinc-900 border-zinc-800">
+					<CardContent className="p-6 space-y-4">
+						<div className="flex flex-col sm:flex-row gap-4 justify-center">
+							<a
+								href={`/api/pdf/${id}`}
+								download
+								className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-medium transition-colors"
+							>
+								<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+								</svg>
+								Download PDF Report
+							</a>
+						</div>
+						<div className="border-t border-zinc-800 pt-4">
+							<p className="text-zinc-400 text-sm text-center mb-3">Share your roast (if you dare)</p>
+							<ShareButtons grade={result.grade} url={`${BASE_URL}/results/${id}`} />
+						</div>
+					</CardContent>
+				</Card>
 
 				{/* CTA */}
 				<div className="text-center pt-6 border-t border-zinc-800">
