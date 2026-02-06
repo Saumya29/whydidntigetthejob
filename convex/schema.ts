@@ -10,12 +10,32 @@ export default defineSchema({
 		skillGaps: v.array(v.string()),
 		hiringManagerQuote: v.string(),
 		improvements: v.array(v.string()),
+		atsScore: v.optional(v.number()),
+		isPaid: v.optional(v.boolean()),
+		paymentSessionId: v.optional(v.string()),
 		createdAt: v.number(),
-	}).index("by_resultId", ["resultId"]),
+	}).index("by_resultId", ["resultId"])
+	  .index("by_createdAt", ["createdAt"]),
 
 	payments: defineTable({
 		sessionId: v.string(),
 		used: v.boolean(),
+		amount: v.optional(v.number()),
 		createdAt: v.number(),
-	}).index("by_sessionId", ["sessionId"]),
+	}).index("by_sessionId", ["sessionId"])
+	  .index("by_createdAt", ["createdAt"]),
+
+	analytics: defineTable({
+		date: v.string(), // YYYY-MM-DD
+		submissions: v.number(),
+		paidSubmissions: v.number(),
+		revenue: v.number(),
+		gradeDistribution: v.object({
+			A: v.number(),
+			B: v.number(),
+			C: v.number(),
+			D: v.number(),
+			F: v.number(),
+		}),
+	}).index("by_date", ["date"]),
 });

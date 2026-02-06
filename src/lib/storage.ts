@@ -98,3 +98,62 @@ export async function isPaymentValid(sessionId: string | null): Promise<boolean>
 export async function recordPayment(sessionId: string): Promise<void> {
 	payments.set(sessionId, { sessionId, used: false, createdAt: new Date() });
 }
+
+// Admin functions
+export async function getAllResults(): Promise<AnalysisResult[]> {
+	return Array.from(results.values()).sort((a, b) => {
+		const timeA = a.createdAt instanceof Date ? a.createdAt.getTime() : a.createdAt;
+		const timeB = b.createdAt instanceof Date ? b.createdAt.getTime() : b.createdAt;
+		return timeB - timeA; // Most recent first
+	});
+}
+
+export async function getAnalytics(): Promise<{
+	total: number;
+	today: number;
+	thisWeek: number;
+	thisMonth: number;
+	paidCount: number;
+	freeCount: number;
+	revenue: number;
+	gradeDistribution: Record<string, number>;
+}> {
+	const allResults = Array.from(results.values());
+	const allPayments = Array.from(payments.values());
+
+	const now = Date.now();
+	const dayMs = 24 * 60 * 60 * 1000;
+	const weekMs = 7 * dayMs;
+	const monthMs = 30 * dayMs;
+
+	const getTime = (r: AnalysisResult) =>
+		r.createdAt instanceof Date ? r.createdAt.getTime() : r.createdAt;
+
+	const today = allResults.filter((r) => getTime(r) > now - dayMs);
+	const thisWeek = allResults.filter((r) => getTime(r) > now - weekMs);
+	const thisMonth = allResults.filter((r) => getTime(r) > now - monthMs);
+
+	// Grade distribution
+	const gradeDistribution: Record<string, number> = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+	for (const result of allResults) {
+		const baseGrade = result.grade.charAt(0).toUpperCase();
+		if (baseGrade in gradeDistribution) {
+			gradeDistribution[baseGrade]++;
+		}
+	}
+
+	// Payment stats
+	const paidCount = allPayments.filter((p) => p.used).length;
+	const revenue = paidCount * 7; // $7 per paid submission
+
+	return {
+		total: allResults.length,
+		today: today.length,
+		thisWeek: thisWeek.length,
+		thisMonth: thisMonth.length,
+		paidCount,
+		freeCount: allResults.length - paidCount,
+		revenue,
+		gradeDistribution,
+	};
+}
