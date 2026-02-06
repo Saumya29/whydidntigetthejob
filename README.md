@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WhyDidntIGetTheJob
+
+> The rejection letter you deserved but never got.
+
+Paste your resume and job description. Get brutal AI feedback on why you didn't get the job.
+
+## Features
+
+- 🔥 Brutal but constructive AI feedback
+- 📊 Roast grade (A-F)
+- 🎯 Skill gap breakdown
+- 💬 "What the hiring manager probably said"
+- 💡 Actionable improvement tips
+- 📸 Screenshot-friendly results
+- 🔗 Shareable results page
+
+## Stack
+
+- **Framework:** Next.js 14 (App Router)
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Payments:** Stripe Checkout
+- **AI:** OpenAI GPT-4o
+- **Deployment:** Vercel
 
 ## Getting Started
 
-First, run the development server:
-
+1. Clone and install:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Set up environment variables:
+```bash
+cp .env.example .env.local
+# Fill in your API keys
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Run locally:
+```bash
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Set up Stripe webhook (for local dev):
+```bash
+stripe listen --forward-to localhost:3000/api/webhook
+```
 
-## Learn More
+## Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Description |
+|----------|-------------|
+| `STRIPE_SECRET_KEY` | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
+| `OPENAI_API_KEY` | OpenAI API key |
+| `NEXT_PUBLIC_URL` | Your app URL (for redirects) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploy to Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/whydidntigetthejob)
 
-## Deploy on Vercel
+1. Connect your repo to Vercel
+2. Add environment variables
+3. Deploy
+4. Set up Stripe webhook pointing to `https://yourdomain.com/api/webhook`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
