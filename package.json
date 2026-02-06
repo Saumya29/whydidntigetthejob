@@ -4,6 +4,8 @@
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
+		"dev:convex": "convex dev",
+		"dev:tunnel": "pnpm dev & cloudflared tunnel --url localhost:3000",
 		"build": "next build",
 		"start": "next start",
 		"lint": "biome check .",
@@ -15,6 +17,7 @@
 		"@vercel/og": "^0.8.6",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
+		"convex": "^1.31.7",
 		"lucide-react": "^0.563.0",
 		"nanoid": "^5.1.6",
 		"next": "14.2.35",
