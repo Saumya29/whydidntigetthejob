@@ -101,6 +101,61 @@ export async function recordPayment(sessionId: string): Promise<void> {
 	payments.set(sessionId, { sessionId, used: false, createdAt: new Date() });
 }
 
+// Free tier email tracking
+interface FreeRoastEmail {
+	email: string;
+	usedAt: number;
+	resultId?: string;
+}
+
+const freeRoasts = new Map<string, FreeRoastEmail>();
+
+export async function checkFreeEmail(email: string): Promise<{ exists: boolean; usedAt?: number; resultId?: string }> {
+	const normalized = email.toLowerCase().trim();
+	const existing = freeRoasts.get(normalized);
+	return {
+		exists: !!existing,
+		usedAt: existing?.usedAt,
+		resultId: existing?.resultId,
+	};
+}
+
+export async function markFreeEmailUsed(email: string, resultId?: string): Promise<{ success: boolean; alreadyUsed: boolean }> {
+	const normalized = email.toLowerCase().trim();
+	const existing = freeRoasts.get(normalized);
+	
+	if (existing) {
+		if (resultId) {
+			existing.resultId = resultId;
+		}
+		return { success: true, alreadyUsed: true };
+	}
+	
+	freeRoasts.set(normalized, {
+		email: normalized,
+		usedAt: Date.now(),
+		resultId,
+	});
+	
+	return { success: true, alreadyUsed: false };
+}
+
+export async function getFreeEmailList(): Promise<FreeRoastEmail[]> {
+	return Array.from(freeRoasts.values());
+}
+
+export async function getFreeEmailStats(): Promise<{ total: number; today: number; thisWeek: number }> {
+	const emails = Array.from(freeRoasts.values());
+	const now = Date.now();
+	const dayMs = 24 * 60 * 60 * 1000;
+	
+	return {
+		total: emails.length,
+		today: emails.filter((e) => e.usedAt > now - dayMs).length,
+		thisWeek: emails.filter((e) => e.usedAt > now - 7 * dayMs).length,
+	};
+}
+
 // Admin functions
 export async function getAllResults(): Promise<AnalysisResult[]> {
 	return Array.from(results.values()).sort((a, b) => {

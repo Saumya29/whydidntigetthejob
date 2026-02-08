@@ -2,6 +2,13 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+	// Email list for free tier tracking + marketing
+	freeRoasts: defineTable({
+		email: v.string(),
+		usedAt: v.number(),
+		resultId: v.optional(v.string()),
+	}).index("by_email", ["email"]),
+
 	results: defineTable({
 		resultId: v.string(),
 		grade: v.string(),
@@ -12,6 +19,8 @@ export default defineSchema({
 		improvements: v.array(v.string()),
 		atsScore: v.optional(v.number()),
 		isPaid: v.optional(v.boolean()),
+		isFreeRoast: v.optional(v.boolean()),
+		email: v.optional(v.string()),
 		paymentSessionId: v.optional(v.string()),
 		createdAt: v.number(),
 	}).index("by_resultId", ["resultId"])

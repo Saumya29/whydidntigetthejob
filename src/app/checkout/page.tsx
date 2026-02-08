@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 
-export default function CheckoutPage() {
+function CheckoutForm() {
+	const searchParams = useSearchParams();
+	const isReturning = searchParams.get("returning") === "1";
+	const email = searchParams.get("email");
+	
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -40,13 +45,27 @@ export default function CheckoutPage() {
 					← Back to home
 				</Link>
 
-				<h1 className="text-3xl font-bold">Ready for the truth?</h1>
-				<p className="text-zinc-400">One payment. Lifetime of clarity.</p>
+				{isReturning ? (
+					<>
+						<div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-4">
+							<p className="text-red-400 text-sm">
+								🔥 You've already used your free roast{email ? ` (${email})` : ""}
+							</p>
+						</div>
+						<h1 className="text-3xl font-bold">Want more roasts?</h1>
+						<p className="text-zinc-400">Unlock unlimited brutal feedback for just $5</p>
+					</>
+				) : (
+					<>
+						<h1 className="text-3xl font-bold">Ready for the truth?</h1>
+						<p className="text-zinc-400">One payment. Lifetime of clarity.</p>
+					</>
+				)}
 
 				<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
 					<div className="flex items-baseline justify-center gap-1">
-						<span className="text-5xl font-bold text-white">$7</span>
-						<span className="text-zinc-500">USD</span>
+						<span className="text-5xl font-bold text-white">$5</span>
+						<span className="text-zinc-500">for 3 roasts</span>
 					</div>
 					<p className="text-zinc-500 text-sm">One-time payment • No subscription</p>
 
@@ -97,7 +116,7 @@ export default function CheckoutPage() {
 							Processing...
 						</span>
 					) : (
-						"Get Roasted — $7"
+						"Get 3 Roasts — $5"
 					)}
 				</Button>
 
@@ -120,5 +139,13 @@ export default function CheckoutPage() {
 				</div>
 			</div>
 		</main>
+	);
+}
+
+export default function CheckoutPage() {
+	return (
+		<Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+			<CheckoutForm />
+		</Suspense>
 	);
 }
