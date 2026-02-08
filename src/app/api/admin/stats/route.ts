@@ -1,19 +1,23 @@
 import { NextResponse } from "next/server";
-import { getAllResults, getAnalytics } from "@/lib/storage";
+import { getAllResults, getAnalytics, getUserStats } from "@/lib/storage";
 
 export async function GET() {
 	try {
 		const analytics = await getAnalytics();
+		const userStats = await getUserStats();
 		const submissions = await getAllResults();
 
 		return NextResponse.json({
 			analytics,
+			userStats,
 			submissions: submissions.map((r) => ({
 				id: r.id,
 				resultId: r.id,
 				grade: r.grade,
 				headline: r.headline,
-				isPaid: false, // Would come from payment tracking
+				isPaid: !r.isFreeRoast,
+				isFreeRoast: r.isFreeRoast,
+				email: r.email,
 				atsScore: r.atsScore?.score,
 				createdAt: r.createdAt instanceof Date ? r.createdAt.getTime() : r.createdAt,
 			})),
