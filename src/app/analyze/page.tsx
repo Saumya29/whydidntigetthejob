@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 
 function AnalyzeForm() {
@@ -36,7 +37,6 @@ function AnalyzeForm() {
 				})
 				.catch(console.error);
 		} else if (!sessionId) {
-			// No email and no paid session - redirect to home
 			router.push("/");
 		}
 	}, [emailParam, sessionId, router]);
@@ -81,80 +81,127 @@ function AnalyzeForm() {
 	};
 
 	return (
-		<main className="min-h-screen p-4 py-12">
-			<div className="max-w-4xl mx-auto space-y-8">
-				<div className="text-center space-y-2">
-					<h1 className="text-3xl font-bold">Time for your roast 🔥</h1>
-					<p className="text-zinc-400">Paste your resume and the job description below</p>
+		<main className="min-h-screen flex flex-col items-center justify-center p-4 py-12">
+			<div className="w-full max-w-4xl mx-auto space-y-8">
+				{/* Back link */}
+				<Link href="/" className="text-zinc-500 hover:text-zinc-300 text-sm inline-block">
+					← Back to home
+				</Link>
+
+				{/* Header */}
+				<div className="text-center space-y-4">
+					<Badge variant="outline" className="text-red-400 border-red-400/50">
+						Step 2 of 2
+					</Badge>
+					<h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+						Time for your <span className="text-red-500">roast</span> 🔥
+					</h1>
+					<p className="text-xl text-zinc-400 max-w-lg mx-auto">
+						Paste your resume and the job description below
+					</p>
 					{roastsRemaining !== null && (
-						<p className="text-sm text-zinc-400 bg-zinc-800 px-3 py-1 rounded-full inline-block">
-							🔥 {roastsRemaining} roast{roastsRemaining !== 1 ? "s" : ""} remaining
-						</p>
+						<div className="inline-flex items-center gap-2 bg-zinc-800/50 border border-zinc-700 px-4 py-2 rounded-full">
+							<span className="text-lg">🔥</span>
+							<span className="text-zinc-300">
+								<span className="font-bold text-white">{roastsRemaining}</span> roast{roastsRemaining !== 1 ? "s" : ""} remaining
+							</span>
+						</div>
 					)}
 				</div>
 
-				<form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-6">
-					<Card className="bg-zinc-900 border-zinc-800">
-						<CardHeader>
-							<CardTitle className="text-zinc-100">Your Resume</CardTitle>
-							<CardDescription>Paste your entire resume text</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<Textarea
-								value={resume}
-								onChange={(e) => setResume(e.target.value)}
-								placeholder="Paste your resume here...
+				{/* Form Container */}
+				<form onSubmit={handleSubmit} className="space-y-6">
+					<div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 md:p-8 space-y-6">
+						<div className="grid md:grid-cols-2 gap-6">
+							{/* Resume Input */}
+							<div className="space-y-3">
+								<div className="flex items-center justify-between">
+									<label className="text-lg font-semibold text-zinc-100">
+										📄 Your Resume
+									</label>
+									<span className="text-xs text-zinc-500">
+										{resume.length > 0 ? `${resume.length} chars` : "Required"}
+									</span>
+								</div>
+								<Textarea
+									value={resume}
+									onChange={(e) => setResume(e.target.value)}
+									placeholder="Paste your entire resume here...
 
-Example:
 John Doe
 Software Engineer
-5 years experience in React, Node.js...
 
-Work Experience:
-- Senior Dev at TechCorp (2020-2023)
-..."
-								className="min-h-[400px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-							/>
-						</CardContent>
-					</Card>
+EXPERIENCE
+Senior Developer at TechCorp (2020-2023)
+• Built scalable APIs serving 1M+ requests/day
+• Led team of 5 engineers..."
+									className="min-h-[280px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-none focus:border-red-500/50 focus:ring-red-500/20"
+									disabled={loading}
+								/>
+							</div>
 
-					<Card className="bg-zinc-900 border-zinc-800">
-						<CardHeader>
-							<CardTitle className="text-zinc-100">Job Description</CardTitle>
-							<CardDescription>Paste the full job posting</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<Textarea
-								value={jobDescription}
-								onChange={(e) => setJobDescription(e.target.value)}
-								placeholder="Paste the job description here...
+							{/* Job Description Input */}
+							<div className="space-y-3">
+								<div className="flex items-center justify-between">
+									<label className="text-lg font-semibold text-zinc-100">
+										🎯 Job Description
+									</label>
+									<span className="text-xs text-zinc-500">
+										{jobDescription.length > 0 ? `${jobDescription.length} chars` : "Required"}
+									</span>
+								</div>
+								<Textarea
+									value={jobDescription}
+									onChange={(e) => setJobDescription(e.target.value)}
+									placeholder="Paste the full job posting here...
 
-Example:
 Senior Software Engineer
 TechCorp Inc.
 
-We're looking for a passionate engineer...
+We're looking for an experienced engineer to join our platform team...
 
 Requirements:
-- 7+ years experience
-- Expert in Python, Go, Kubernetes
-..."
-								className="min-h-[400px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-							/>
-						</CardContent>
-					</Card>
+• 7+ years of backend experience
+• Expert in distributed systems..."
+									className="min-h-[280px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-none focus:border-red-500/50 focus:ring-red-500/20"
+									disabled={loading}
+								/>
+							</div>
+						</div>
 
-					<div className="md:col-span-2 space-y-4">
-						{error && <p className="text-red-400 text-center">{error}</p>}
+						{/* Error */}
+						{error && (
+							<div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
+								<p className="text-red-400 text-sm">{error}</p>
+							</div>
+						)}
 
+						{/* Submit Button */}
 						<Button
 							type="submit"
-							disabled={loading}
+							disabled={loading || !resume.trim() || !jobDescription.trim()}
 							size="lg"
-							className="w-full bg-red-600 hover:bg-red-700 text-white text-lg py-6"
+							className="w-full bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 disabled:text-zinc-400 text-white text-lg py-7 rounded-xl transition-all"
 						>
-							{loading ? "Analyzing your failures..." : "Roast Me 🔥"}
+							{loading ? (
+								<span className="flex items-center gap-3">
+									<svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+										<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+										<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+									</svg>
+									Analyzing your application...
+								</span>
+							) : (
+								"Roast Me 🔥"
+							)}
 						</Button>
+					</div>
+
+					{/* Tips */}
+					<div className="flex flex-wrap justify-center gap-4 text-sm text-zinc-500">
+						<span>💡 Tip: Include your full resume for better analysis</span>
+						<span>•</span>
+						<span>📋 Copy the entire job posting, not just requirements</span>
 					</div>
 				</form>
 			</div>
@@ -165,7 +212,17 @@ Requirements:
 export default function AnalyzePage() {
 	return (
 		<Suspense
-			fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}
+			fallback={
+				<div className="min-h-screen flex items-center justify-center">
+					<div className="flex items-center gap-3 text-zinc-400">
+						<svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+							<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+							<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+						</svg>
+						Loading...
+					</div>
+				</div>
+			}
 		>
 			<AnalyzeForm />
 		</Suspense>
