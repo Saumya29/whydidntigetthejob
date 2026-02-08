@@ -63,6 +63,8 @@ export interface AnalysisResult {
 	// Legacy
 	skillGaps: string[];
 	createdAt: Date;
+	// Free tier tracking
+	isFreeRoast?: boolean;
 }
 
 interface PaymentSession {

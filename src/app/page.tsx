@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { hasUsedFreeRoast, getFreeRoastId } from "@/lib/free-tier";
 
 const exampleRoasts = [
 	{
@@ -29,6 +31,14 @@ const exampleRoasts = [
 ];
 
 export default function Home() {
+	const [usedFreeRoast, setUsedFreeRoast] = useState(false);
+	const [freeRoastId, setFreeRoastId] = useState<string | null>(null);
+
+	useEffect(() => {
+		setUsedFreeRoast(hasUsedFreeRoast());
+		setFreeRoastId(getFreeRoastId());
+	}, []);
+
 	return (
 		<main className="min-h-screen flex flex-col items-center justify-center p-4">
 			<div className="max-w-2xl mx-auto text-center space-y-8">
@@ -64,13 +74,35 @@ export default function Home() {
 				</div>
 
 				{/* CTA */}
-				<div className="space-y-3">
-					<Link href="/checkout">
-						<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white text-lg px-8 py-6">
-							Get Roasted — $7
-						</Button>
-					</Link>
-					<p className="text-sm text-zinc-500">One-time payment. No subscription. No BS.</p>
+				<div className="space-y-4">
+					{!usedFreeRoast ? (
+						<>
+							<Link href="/analyze?free=1">
+								<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white text-lg px-8 py-6">
+									Try Free — First Roast On Us 🔥
+								</Button>
+							</Link>
+							<p className="text-sm text-zinc-500">No payment required for your first roast</p>
+						</>
+					) : (
+						<>
+							<div className="flex flex-col sm:flex-row gap-3 justify-center">
+								{freeRoastId && (
+									<Link href={`/results/${freeRoastId}`}>
+										<Button variant="outline" size="lg" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+											View Your Free Roast
+										</Button>
+									</Link>
+								)}
+								<Link href="/checkout">
+									<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white text-lg px-8 py-6">
+										Get More Roasts — $7
+									</Button>
+								</Link>
+							</div>
+							<p className="text-sm text-zinc-500">You've used your free roast. Unlock unlimited roasts for $7.</p>
+						</>
+					)}
 				</div>
 
 				{/* Example Roasts */}
@@ -146,11 +178,19 @@ export default function Home() {
 
 				{/* Bottom CTA */}
 				<div className="pb-8">
-					<Link href="/checkout">
-						<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white">
-							Get Your Roast — $7
-						</Button>
-					</Link>
+					{!usedFreeRoast ? (
+						<Link href="/analyze?free=1">
+							<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white">
+								Try Your First Roast Free →
+							</Button>
+						</Link>
+					) : (
+						<Link href="/checkout">
+							<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white">
+								Get Unlimited Roasts — $7
+							</Button>
+						</Link>
+					)}
 				</div>
 			</div>
 		</main>

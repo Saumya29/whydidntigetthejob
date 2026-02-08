@@ -1,26 +1,42 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { hasUsedFreeRoast, markFreeRoastUsed } from "@/lib/free-tier";
 
 function AnalyzeForm() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const sessionId = searchParams.get("session_id");
+	const isFreeMode = searchParams.get("free") === "1";
 
 	const [resume, setResume] = useState("");
 	const [jobDescription, setJobDescription] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [alreadyUsedFree, setAlreadyUsedFree] = useState(false);
+
+	// Check if free roast already used
+	useEffect(() => {
+		if (isFreeMode && hasUsedFreeRoast()) {
+			setAlreadyUsedFree(true);
+		}
+	}, [isFreeMode]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
 		if (!resume.trim() || !jobDescription.trim()) {
 			setError("Please fill in both fields");
+			return;
+		}
+
+		// Block if trying to use free roast again
+		if (isFreeMode && hasUsedFreeRoast()) {
+			router.push("/checkout");
 			return;
 		}
 
@@ -35,13 +51,18 @@ function AnalyzeForm() {
 					resume,
 					jobDescription,
 					sessionId,
+					isFreeRoast: isFreeMode && !hasUsedFreeRoast(),
 				}),
 			});
 
 			const data = await res.json();
 
 			if (data.id) {
-				router.push(`/results/${data.id}`);
+				// Mark free roast as used
+				if (isFreeMode) {
+					markFreeRoastUsed(data.id);
+				}
+				router.push(`/results/${data.id}${isFreeMode ? "?free=1" : ""}`);
 			} else {
 				setError(data.error || "Analysis failed");
 			}
@@ -52,12 +73,40 @@ function AnalyzeForm() {
 		}
 	};
 
+	// Show paywall if already used free roast
+	if (alreadyUsedFree) {
+		return (
+			<main className="min-h-screen p-4 py-12 flex items-center justify-center">
+				<div className="max-w-md mx-auto text-center space-y-6">
+					<div className="text-6xl">🔥</div>
+					<h1 className="text-3xl font-bold">You've used your free roast!</h1>
+					<p className="text-zinc-400">
+						Want more brutal feedback? Unlock unlimited roasts for just $7.
+					</p>
+					<Button
+						onClick={() => router.push("/checkout")}
+						size="lg"
+						className="bg-red-600 hover:bg-red-700 text-white text-lg px-8 py-6"
+					>
+						Get Unlimited Roasts — $7
+					</Button>
+					<p className="text-sm text-zinc-500">One-time payment. Roast as many applications as you want.</p>
+				</div>
+			</main>
+		);
+	}
+
 	return (
 		<main className="min-h-screen p-4 py-12">
 			<div className="max-w-4xl mx-auto space-y-8">
 				<div className="text-center space-y-2">
 					<h1 className="text-3xl font-bold">Time for your roast 🔥</h1>
 					<p className="text-zinc-400">Paste your resume and the job description below</p>
+					{isFreeMode && (
+						<p className="text-sm text-green-400 bg-green-400/10 px-3 py-1 rounded-full inline-block">
+							✨ Free roast — no payment required
+						</p>
+					)}
 				</div>
 
 				<form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-6">

@@ -8,6 +8,7 @@ import { getResult, type AnalysisResult, type SkillGap, type Priority, type Recr
 
 interface Props {
 	params: Promise<{ id: string }>;
+	searchParams: Promise<{ free?: string }>;
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://whydidntigetthejob.com";
@@ -270,9 +271,11 @@ function BulletRewriteSection({ rewrite }: { rewrite: AnalysisResult["bulletRewr
 	);
 }
 
-export default async function ResultsPage({ params }: Props) {
+export default async function ResultsPage({ params, searchParams }: Props) {
 	const { id } = await params;
+	const { free } = await searchParams;
 	const result = await getResult(id);
+	const isFreeRoast = free === "1" || result?.isFreeRoast;
 
 	if (!result) {
 		return (
@@ -293,10 +296,25 @@ export default async function ResultsPage({ params }: Props) {
 	return (
 		<main className="min-h-screen p-4 py-8 md:py-12">
 			<div className="max-w-3xl mx-auto space-y-6">
+				{/* Free Roast Upsell Banner */}
+				{isFreeRoast && (
+					<div className="bg-gradient-to-r from-red-600/20 to-orange-600/20 border border-red-500/30 rounded-2xl p-6 text-center">
+						<p className="text-xl font-bold text-white mb-2">🔥 You just got roasted for free!</p>
+						<p className="text-zinc-300 mb-4">
+							Want to analyze more applications? Get unlimited roasts for just $7.
+						</p>
+						<Link href="/checkout">
+							<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white px-8">
+								Unlock Unlimited Roasts — $7
+							</Button>
+						</Link>
+					</div>
+				)}
+
 				{/* Header */}
 				<div className="text-center space-y-2">
-					<Badge variant="outline" className="text-red-400 border-red-400/50">
-						Your $7 Reality Check
+					<Badge variant="outline" className={isFreeRoast ? "text-green-400 border-green-400/50" : "text-red-400 border-red-400/50"}>
+						{isFreeRoast ? "Your Free Roast" : "Your $7 Reality Check"}
 					</Badge>
 					<h1 className="text-2xl md:text-3xl font-bold">The Verdict Is In</h1>
 				</div>
@@ -472,10 +490,27 @@ export default async function ResultsPage({ params }: Props) {
 
 				{/* CTA */}
 				<div className="text-center pt-6 border-t border-zinc-800">
-					<p className="text-zinc-500 mb-4">Got another rejection to process?</p>
-					<Link href="/">
-						<Button className="bg-red-600 hover:bg-red-700">Get Roasted Again — $7</Button>
-					</Link>
+					{isFreeRoast ? (
+						<div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 space-y-4">
+							<p className="text-xl font-bold">Ready to level up your job search?</p>
+							<p className="text-zinc-400">
+								You've seen how it works. Now unlock unlimited roasts to perfect every application.
+							</p>
+							<Link href="/checkout">
+								<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg">
+									Get Unlimited Roasts — $7
+								</Button>
+							</Link>
+							<p className="text-sm text-zinc-500">One-time payment • Roast as many applications as you want</p>
+						</div>
+					) : (
+						<>
+							<p className="text-zinc-500 mb-4">Got another rejection to process?</p>
+							<Link href="/analyze">
+								<Button className="bg-red-600 hover:bg-red-700">Get Roasted Again</Button>
+							</Link>
+						</>
+					)}
 				</div>
 			</div>
 		</main>

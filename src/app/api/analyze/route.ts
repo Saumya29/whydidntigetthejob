@@ -9,7 +9,7 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
 	try {
-		const { resume, jobDescription, sessionId } = await request.json();
+		const { resume, jobDescription, sessionId, isFreeRoast } = await request.json();
 
 		if (!resume || !jobDescription) {
 			return NextResponse.json(
@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// For MVP/testing, allow bypass if no session
-		// In production, strictly validate payment
-		if (process.env.NODE_ENV === "production" && sessionId) {
+		// Free roast flow: skip payment validation
+		// Payment validation for paid roasts
+		if (!isFreeRoast && process.env.NODE_ENV === "production" && sessionId) {
 			const valid = await isPaymentValid(sessionId);
 			if (!valid) {
 				return NextResponse.json({ error: "Invalid or expired payment session" }, { status: 403 });
@@ -128,6 +128,7 @@ Be savage but helpful. Make it entertaining AND genuinely useful. The candidate 
 			// Legacy fields for backwards compat
 			skillGaps: analysis.skillGapHeatmap?.filter((s: { status: string }) => s.status !== "strong").map((s: { skill: string }) => s.skill) || [],
 			createdAt: new Date(),
+			isFreeRoast: isFreeRoast || false,
 		});
 
 		// Mark payment as used
