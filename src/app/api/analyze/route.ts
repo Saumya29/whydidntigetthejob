@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { isPaymentValid, markPaymentUsed, saveResult } from "@/lib/storage";
+import { isPaymentValid, markPaymentUsed, saveResult, useRoast, getOrCreateUser } from "@/lib/storage";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
@@ -9,7 +9,7 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
 	try {
-		const { resume, jobDescription, sessionId, isFreeRoast } = await request.json();
+		const { resume, jobDescription, sessionId, email } = await request.json();
 
 		if (!resume || !jobDescription) {
 			return NextResponse.json(
@@ -18,11 +18,21 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Free roast flow: skip payment validation
-		// Payment validation for paid roasts
-		if (!isFreeRoast && process.env.NODE_ENV === "production" && sessionId) {
+		// Check roast credits if email provided
+		let roastResult = null;
+		if (email) {
+			roastResult = await useRoast(email);
+			if (!roastResult.success) {
+				return NextResponse.json({ 
+					error: "No roasts remaining", 
+					needsPayment: true,
+					remaining: 0 
+				}, { status: 402 });
+			}
+		} else if (sessionId) {
+			// Paid session validation
 			const valid = await isPaymentValid(sessionId);
-			if (!valid) {
+			if (!valid && process.env.NODE_ENV === "production") {
 				return NextResponse.json({ error: "Invalid or expired payment session" }, { status: 403 });
 			}
 		}
@@ -128,7 +138,8 @@ Be savage but helpful. Make it entertaining AND genuinely useful. The candidate 
 			// Legacy fields for backwards compat
 			skillGaps: analysis.skillGapHeatmap?.filter((s: { status: string }) => s.status !== "strong").map((s: { skill: string }) => s.skill) || [],
 			createdAt: new Date(),
-			isFreeRoast: isFreeRoast || false,
+			isFreeRoast: !!email,
+			email: email || undefined,
 		});
 
 		// Mark payment as used
@@ -136,7 +147,10 @@ Be savage but helpful. Make it entertaining AND genuinely useful. The candidate 
 			await markPaymentUsed(sessionId);
 		}
 
-		return NextResponse.json({ id });
+		return NextResponse.json({ 
+			id,
+			remaining: roastResult?.remaining ?? null,
+		});
 	} catch (error) {
 		console.error("Analysis error:", error);
 		return NextResponse.json({ error: "Failed to analyze. Please try again." }, { status: 500 });

@@ -65,6 +65,7 @@ export interface AnalysisResult {
 	createdAt: Date;
 	// Free tier tracking
 	isFreeRoast?: boolean;
+	email?: string;
 }
 
 interface PaymentSession {
@@ -101,59 +102,79 @@ export async function recordPayment(sessionId: string): Promise<void> {
 	payments.set(sessionId, { sessionId, used: false, createdAt: new Date() });
 }
 
-// Free tier email tracking
-interface FreeRoastEmail {
+// User account with roast credits
+interface UserAccount {
 	email: string;
-	usedAt: number;
-	resultId?: string;
+	roastsRemaining: number;
+	totalRoasts: number;
+	createdAt: number;
+	lastRoastAt?: number;
+	isPaid: boolean;
 }
 
-const freeRoasts = new Map<string, FreeRoastEmail>();
+const FREE_ROASTS = 3;
+const users = new Map<string, UserAccount>();
 
-export async function checkFreeEmail(email: string): Promise<{ exists: boolean; usedAt?: number; resultId?: string }> {
+export async function getOrCreateUser(email: string): Promise<UserAccount> {
 	const normalized = email.toLowerCase().trim();
-	const existing = freeRoasts.get(normalized);
-	return {
-		exists: !!existing,
-		usedAt: existing?.usedAt,
-		resultId: existing?.resultId,
-	};
-}
-
-export async function markFreeEmailUsed(email: string, resultId?: string): Promise<{ success: boolean; alreadyUsed: boolean }> {
-	const normalized = email.toLowerCase().trim();
-	const existing = freeRoasts.get(normalized);
+	let user = users.get(normalized);
 	
-	if (existing) {
-		if (resultId) {
-			existing.resultId = resultId;
-		}
-		return { success: true, alreadyUsed: true };
+	if (!user) {
+		user = {
+			email: normalized,
+			roastsRemaining: FREE_ROASTS,
+			totalRoasts: 0,
+			createdAt: Date.now(),
+			isPaid: false,
+		};
+		users.set(normalized, user);
 	}
 	
-	freeRoasts.set(normalized, {
-		email: normalized,
-		usedAt: Date.now(),
-		resultId,
-	});
-	
-	return { success: true, alreadyUsed: false };
+	return user;
 }
 
-export async function getFreeEmailList(): Promise<FreeRoastEmail[]> {
-	return Array.from(freeRoasts.values());
+export async function useRoast(email: string): Promise<{ success: boolean; remaining: number; needsPayment: boolean }> {
+	const normalized = email.toLowerCase().trim();
+	const user = await getOrCreateUser(normalized);
+	
+	if (user.roastsRemaining <= 0) {
+		return { success: false, remaining: 0, needsPayment: true };
+	}
+	
+	user.roastsRemaining--;
+	user.totalRoasts++;
+	user.lastRoastAt = Date.now();
+	
+	return { success: true, remaining: user.roastsRemaining, needsPayment: false };
 }
 
-export async function getFreeEmailStats(): Promise<{ total: number; today: number; thisWeek: number }> {
-	const emails = Array.from(freeRoasts.values());
-	const now = Date.now();
-	const dayMs = 24 * 60 * 60 * 1000;
+export async function addRoasts(email: string, count: number): Promise<{ success: boolean; remaining: number }> {
+	const normalized = email.toLowerCase().trim();
+	const user = await getOrCreateUser(normalized);
 	
+	user.roastsRemaining += count;
+	user.isPaid = true;
+	
+	return { success: true, remaining: user.roastsRemaining };
+}
+
+export async function getRoastsRemaining(email: string): Promise<number> {
+	const normalized = email.toLowerCase().trim();
+	const user = users.get(normalized);
+	return user?.roastsRemaining ?? FREE_ROASTS;
+}
+
+export async function getUserStats(): Promise<{ total: number; paid: number; freeOnly: number }> {
+	const allUsers = Array.from(users.values());
 	return {
-		total: emails.length,
-		today: emails.filter((e) => e.usedAt > now - dayMs).length,
-		thisWeek: emails.filter((e) => e.usedAt > now - 7 * dayMs).length,
+		total: allUsers.length,
+		paid: allUsers.filter((u) => u.isPaid).length,
+		freeOnly: allUsers.filter((u) => !u.isPaid).length,
 	};
+}
+
+export async function getAllUsers(): Promise<UserAccount[]> {
+	return Array.from(users.values());
 }
 
 // Admin functions

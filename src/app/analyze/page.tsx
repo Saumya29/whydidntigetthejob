@@ -10,21 +10,36 @@ function AnalyzeForm() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const sessionId = searchParams.get("session_id");
-	const isFreeMode = searchParams.get("free") === "1";
 	const emailParam = searchParams.get("email");
 
 	const [resume, setResume] = useState("");
 	const [jobDescription, setJobDescription] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [alreadyUsedFree, setAlreadyUsedFree] = useState(false);
+	const [roastsRemaining, setRoastsRemaining] = useState<number | null>(null);
 
-	// Check if trying to access free mode without email
+	// Check roasts remaining on mount
 	useEffect(() => {
-		if (isFreeMode && !emailParam) {
-			router.push("/free");
+		if (emailParam) {
+			fetch("/api/user/check", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email: emailParam }),
+			})
+				.then((res) => res.json())
+				.then((data) => {
+					if (data.roastsRemaining === 0) {
+						router.push(`/pricing?email=${encodeURIComponent(emailParam)}`);
+					} else {
+						setRoastsRemaining(data.roastsRemaining);
+					}
+				})
+				.catch(console.error);
+		} else if (!sessionId) {
+			// No email and no paid session - redirect to home
+			router.push("/");
 		}
-	}, [isFreeMode, emailParam, router]);
+	}, [emailParam, sessionId, router]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -45,7 +60,6 @@ function AnalyzeForm() {
 					resume,
 					jobDescription,
 					sessionId,
-					isFreeRoast: isFreeMode && !!emailParam,
 					email: emailParam,
 				}),
 			});
@@ -53,15 +67,9 @@ function AnalyzeForm() {
 			const data = await res.json();
 
 			if (data.id) {
-				// Mark email as used for free roast
-				if (isFreeMode && emailParam) {
-					await fetch("/api/free/mark", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ email: emailParam, resultId: data.id }),
-					});
-				}
-				router.push(`/results/${data.id}${isFreeMode ? "?free=1" : ""}`);
+				router.push(`/results/${data.id}?email=${encodeURIComponent(emailParam || "")}`);
+			} else if (data.needsPayment) {
+				router.push(`/pricing?email=${encodeURIComponent(emailParam || "")}`);
 			} else {
 				setError(data.error || "Analysis failed");
 			}
@@ -78,9 +86,9 @@ function AnalyzeForm() {
 				<div className="text-center space-y-2">
 					<h1 className="text-3xl font-bold">Time for your roast 🔥</h1>
 					<p className="text-zinc-400">Paste your resume and the job description below</p>
-					{isFreeMode && (
-						<p className="text-sm text-green-400 bg-green-400/10 px-3 py-1 rounded-full inline-block">
-							✨ Free roast — no payment required
+					{roastsRemaining !== null && (
+						<p className="text-sm text-zinc-400 bg-zinc-800 px-3 py-1 rounded-full inline-block">
+							🔥 {roastsRemaining} roast{roastsRemaining !== 1 ? "s" : ""} remaining
 						</p>
 					)}
 				</div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkFreeEmail } from "@/lib/storage";
+import { getOrCreateUser } from "@/lib/storage";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -12,17 +12,18 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const result = await checkFreeEmail(email);
+		const user = await getOrCreateUser(email);
 
 		return NextResponse.json({
-			alreadyUsed: result.exists,
-			usedAt: result.usedAt,
-			resultId: result.resultId,
+			email: user.email,
+			roastsRemaining: user.roastsRemaining,
+			totalRoasts: user.totalRoasts,
+			isPaid: user.isPaid,
 		});
 	} catch (error) {
-		console.error("Free tier check error:", error);
+		console.error("User check error:", error);
 		return NextResponse.json(
-			{ error: "Failed to check email" },
+			{ error: "Failed to check user" },
 			{ status: 500 }
 		);
 	}

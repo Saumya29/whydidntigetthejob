@@ -8,7 +8,7 @@ import { getResult, type AnalysisResult, type SkillGap, type Priority, type Recr
 
 interface Props {
 	params: Promise<{ id: string }>;
-	searchParams: Promise<{ free?: string }>;
+	searchParams: Promise<{ free?: string; email?: string }>;
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://whydidntigetthejob.com";
@@ -271,11 +271,19 @@ function BulletRewriteSection({ rewrite }: { rewrite: AnalysisResult["bulletRewr
 	);
 }
 
+import { getRoastsRemaining } from "@/lib/storage";
+
 export default async function ResultsPage({ params, searchParams }: Props) {
 	const { id } = await params;
-	const { free } = await searchParams;
+	const { free, email } = await searchParams;
 	const result = await getResult(id);
 	const isFreeRoast = free === "1" || result?.isFreeRoast;
+	
+	// Get remaining roasts if email provided
+	let roastsRemaining: number | null = null;
+	if (email) {
+		roastsRemaining = await getRoastsRemaining(email);
+	}
 
 	if (!result) {
 		return (
@@ -296,25 +304,42 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 	return (
 		<main className="min-h-screen p-4 py-8 md:py-12">
 			<div className="max-w-3xl mx-auto space-y-6">
-				{/* Free Roast Upsell Banner */}
-				{isFreeRoast && (
-					<div className="bg-gradient-to-r from-red-600/20 to-orange-600/20 border border-red-500/30 rounded-2xl p-6 text-center">
-						<p className="text-xl font-bold text-white mb-2">🔥 You just got roasted for free!</p>
-						<p className="text-zinc-300 mb-4">
-							Want to analyze more applications? Get 3 roasts for just $5.
-						</p>
-						<Link href="/checkout">
-							<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white px-8">
-								Unlock 3 roasts — $5
-							</Button>
-						</Link>
+				{/* Remaining Roasts Banner */}
+				{email && roastsRemaining !== null && (
+					<div className={`rounded-2xl p-4 text-center ${
+						roastsRemaining > 0 
+							? "bg-zinc-800/50 border border-zinc-700" 
+							: "bg-gradient-to-r from-red-600/20 to-orange-600/20 border border-red-500/30"
+					}`}>
+						{roastsRemaining > 0 ? (
+							<>
+								<p className="text-zinc-300">
+									🔥 <span className="font-bold text-white">{roastsRemaining}</span> roast{roastsRemaining !== 1 ? "s" : ""} remaining
+								</p>
+								<Link href={`/analyze?email=${encodeURIComponent(email)}`} className="text-red-400 text-sm hover:underline">
+									Roast another application →
+								</Link>
+							</>
+						) : (
+							<>
+								<p className="text-xl font-bold text-white mb-2">🔥 You&apos;ve used all your roasts!</p>
+								<p className="text-zinc-300 mb-3">
+									Get more roasts to keep improving.
+								</p>
+								<Link href={`/pricing?email=${encodeURIComponent(email)}`}>
+									<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white px-8">
+										Get 10 Roasts for $5 →
+									</Button>
+								</Link>
+							</>
+						)}
 					</div>
 				)}
 
 				{/* Header */}
 				<div className="text-center space-y-2">
-					<Badge variant="outline" className={isFreeRoast ? "text-green-400 border-green-400/50" : "text-red-400 border-red-400/50"}>
-						{isFreeRoast ? "Your Free Roast" : "Your $5 Reality Check"}
+					<Badge variant="outline" className="text-red-400 border-red-400/50">
+						Your Roast Results
 					</Badge>
 					<h1 className="text-2xl md:text-3xl font-bold">The Verdict Is In</h1>
 				</div>
