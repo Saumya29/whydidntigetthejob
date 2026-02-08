@@ -12,6 +12,7 @@
 		"format": "biome check --write ."
 	},
 	"dependencies": {
+		"@clerk/nextjs": "^6.37.3",
 		"@radix-ui/react-slot": "^1.2.4",
 		"@stripe/stripe-js": "^8.7.0",
 		"@vercel/og": "^0.8.6",

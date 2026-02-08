@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { ConvexClientProvider } from "@/components/convex-provider";
 
@@ -61,18 +62,46 @@ export const metadata: Metadata = {
 	manifest: "/manifest.json",
 };
 
+// Check if Clerk is configured
+const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+function AuthWrapper({ children }: { children: React.ReactNode }) {
+	if (!isClerkConfigured) {
+		// Skip Clerk in development without keys
+		return <>{children}</>;
+	}
+
+	return (
+		<ClerkProvider
+			appearance={{
+				variables: {
+					colorPrimary: "#dc2626",
+					colorBackground: "#09090b",
+					colorInputBackground: "#18181b",
+					colorInputText: "#fafafa",
+					colorText: "#fafafa",
+				},
+			}}
+		>
+			{children}
+		</ClerkProvider>
+	);
+}
+
 export default function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en">
-			<body className={`${inter.className} bg-zinc-950 text-zinc-100 min-h-screen antialiased`}>
-				<ConvexClientProvider>
-					{children}
-				</ConvexClientProvider>
-			</body>
-		</html>
+		<AuthWrapper>
+			<html lang="en">
+				<body className={`${inter.className} bg-zinc-950 text-zinc-100 min-h-screen antialiased`}>
+					<ConvexClientProvider>
+						{children}
+					</ConvexClientProvider>
+				</body>
+			</html>
+		</AuthWrapper>
 	);
 }
