@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useUser, SignInButton } from "@clerk/nextjs";
+import { useUser, SignInButton, SignOutButton } from "@clerk/nextjs";
 // import { useQuery } from "convex/react";
 // import { api } from "../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
@@ -126,9 +126,14 @@ export default function AnalyzePage() {
 						Paste your resume and the job description below
 					</p>
 					{user?.primaryEmailAddress && (
-						<p className="text-sm text-zinc-500">
-							Signed in as {user.primaryEmailAddress.emailAddress}
-						</p>
+						<div className="flex items-center justify-center gap-3 text-sm text-zinc-500">
+							<span>Signed in as {user.primaryEmailAddress.emailAddress}</span>
+							<SignOutButton>
+								<button className="text-red-400 hover:text-red-300 underline underline-offset-2">
+									Logout
+								</button>
+							</SignOutButton>
+						</div>
 					)}
 					{roastsRemaining !== null && (
 						<div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${

@@ -70,10 +70,10 @@ export default function Home() {
 							size="lg"
 							className="bg-red-600 hover:bg-red-700 text-white px-8 h-14 text-lg"
 						>
-							Get Roasted Free 🔥
+							Get Roasted 🔥
 						</Button>
 					</Link>
-					<p className="text-sm text-zinc-500">3 free roasts • No credit card required</p>
+					<p className="text-sm text-zinc-500">First 3 roasts on us • No credit card</p>
 				</div>
 
 				{/* Example Roasts */}
@@ -154,7 +154,7 @@ export default function Home() {
 							size="lg"
 							className="bg-red-600 hover:bg-red-700 text-white"
 						>
-							Try Your First Roast Free →
+							Start Your 3 Free Roasts →
 						</Button>
 					</Link>
 				</div>

@@ -80,6 +80,52 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
 					colorInputBackground: "#18181b",
 					colorInputText: "#fafafa",
 					colorText: "#fafafa",
+					colorTextOnPrimaryBackground: "#ffffff",
+					colorTextSecondary: "#a1a1aa",
+				},
+				elements: {
+					socialButtonsBlockButton: {
+						backgroundColor: "#27272a",
+						color: "#fafafa",
+						borderColor: "#3f3f46",
+						"&:hover": {
+							backgroundColor: "#3f3f46",
+						},
+					},
+					socialButtonsBlockButtonText: {
+						color: "#fafafa",
+					},
+					dividerLine: {
+						backgroundColor: "#3f3f46",
+					},
+					dividerText: {
+						color: "#a1a1aa",
+					},
+					formButtonPrimary: {
+						backgroundColor: "#dc2626",
+						"&:hover": {
+							backgroundColor: "#b91c1c",
+						},
+					},
+					card: {
+						backgroundColor: "#09090b",
+						borderColor: "#27272a",
+					},
+					headerTitle: {
+						color: "#fafafa",
+					},
+					headerSubtitle: {
+						color: "#a1a1aa",
+					},
+					formFieldLabel: {
+						color: "#fafafa",
+					},
+					footerActionLink: {
+						color: "#dc2626",
+						"&:hover": {
+							color: "#ef4444",
+						},
+					},
 				},
 			}}
 		>
