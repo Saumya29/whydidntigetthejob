@@ -66,6 +66,7 @@ export interface AnalysisResult {
 	// Free tier tracking
 	isFreeRoast?: boolean;
 	email?: string;
+	userId?: string;
 }
 
 interface PaymentSession {

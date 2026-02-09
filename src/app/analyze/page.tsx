@@ -1,45 +1,53 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useUser, SignInButton } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-function AnalyzeForm() {
+export default function AnalyzePage() {
 	const router = useRouter();
-	const searchParams = useSearchParams();
-	const sessionId = searchParams.get("session_id");
-	const emailParam = searchParams.get("email");
+	const { isLoaded, isSignedIn, user } = useUser();
 
 	const [resume, setResume] = useState("");
 	const [jobDescription, setJobDescription] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [roastsRemaining, setRoastsRemaining] = useState<number | null>(null);
 
-	// Check roasts remaining on mount
-	useEffect(() => {
-		if (emailParam) {
-			fetch("/api/user/check", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ email: emailParam }),
-			})
-				.then((res) => res.json())
-				.then((data) => {
-					if (data.roastsRemaining === 0) {
-						router.push(`/pricing?email=${encodeURIComponent(emailParam)}`);
-					} else {
-						setRoastsRemaining(data.roastsRemaining);
-					}
-				})
-				.catch(console.error);
-		} else if (!sessionId) {
-			router.push("/");
-		}
-	}, [emailParam, sessionId, router]);
+	// Show loading while Clerk is initializing
+	if (!isLoaded) {
+		return (
+			<div className="min-h-screen flex items-center justify-center">
+				<div className="flex items-center gap-3 text-zinc-400">
+					<svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+						<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+					</svg>
+					Loading...
+				</div>
+			</div>
+		);
+	}
+
+	// Show sign-in prompt if not authenticated
+	if (!isSignedIn) {
+		return (
+			<main className="min-h-screen flex flex-col items-center justify-center p-4">
+				<div className="text-center space-y-6">
+					<h1 className="text-3xl font-bold">Sign in to get roasted 🔥</h1>
+					<p className="text-zinc-400">Create a free account to get 3 free resume roasts</p>
+					<SignInButton mode="modal">
+						<Button size="lg" className="bg-red-600 hover:bg-red-700">
+							Sign In to Continue
+						</Button>
+					</SignInButton>
+				</div>
+			</main>
+		);
+	}
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -59,19 +67,17 @@ function AnalyzeForm() {
 				body: JSON.stringify({
 					resume,
 					jobDescription,
-					sessionId,
-					email: emailParam,
 				}),
 			});
 
 			const data = await res.json();
 
 			if (data.id) {
-				router.push(`/results/${data.id}?email=${encodeURIComponent(emailParam || "")}`);
+				router.push(`/results/${data.id}`);
 			} else if (data.needsPayment) {
-				router.push(`/pricing?email=${encodeURIComponent(emailParam || "")}`);
+				router.push("/pricing");
 			} else {
-				setError(data.error || "Analysis failed");
+				setError(data.error || "Analysis failed. Please try again.");
 			}
 		} catch {
 			setError("Something went wrong. Please try again.");
@@ -91,7 +97,7 @@ function AnalyzeForm() {
 				{/* Header */}
 				<div className="text-center space-y-4">
 					<Badge variant="outline" className="text-red-400 border-red-400/50">
-						Step 2 of 2
+						Ready to roast
 					</Badge>
 					<h1 className="text-4xl md:text-5xl font-bold tracking-tight">
 						Time for your <span className="text-red-500">roast</span> 🔥
@@ -99,13 +105,10 @@ function AnalyzeForm() {
 					<p className="text-xl text-zinc-400 max-w-lg mx-auto">
 						Paste your resume and the job description below
 					</p>
-					{roastsRemaining !== null && (
-						<div className="inline-flex items-center gap-2 bg-zinc-800/50 border border-zinc-700 px-4 py-2 rounded-full">
-							<span className="text-lg">🔥</span>
-							<span className="text-zinc-300">
-								<span className="font-bold text-white">{roastsRemaining}</span> roast{roastsRemaining !== 1 ? "s" : ""} remaining
-							</span>
-						</div>
+					{user?.primaryEmailAddress && (
+						<p className="text-sm text-zinc-500">
+							Signed in as {user.primaryEmailAddress.emailAddress}
+						</p>
 					)}
 				</div>
 
@@ -206,25 +209,5 @@ Requirements:
 				</form>
 			</div>
 		</main>
-	);
-}
-
-export default function AnalyzePage() {
-	return (
-		<Suspense
-			fallback={
-				<div className="min-h-screen flex items-center justify-center">
-					<div className="flex items-center gap-3 text-zinc-400">
-						<svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-							<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-							<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-						</svg>
-						Loading...
-					</div>
-				</div>
-			}
-		>
-			<AnalyzeForm />
-		</Suspense>
 	);
 }

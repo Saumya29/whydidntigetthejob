@@ -1,7 +1,8 @@
 import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { isPaymentValid, markPaymentUsed, saveResult, useRoast, getOrCreateUser } from "@/lib/storage";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { isPaymentValid, markPaymentUsed, saveResult, useRoast } from "@/lib/storage";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
@@ -9,7 +10,26 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
 	try {
-		const { resume, jobDescription, sessionId, email } = await request.json();
+		// Get authenticated user from Clerk
+		const { userId } = await auth();
+		const user = await currentUser();
+		
+		if (!userId || !user) {
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
+		}
+
+		const email = user.primaryEmailAddress?.emailAddress;
+		if (!email) {
+			return NextResponse.json(
+				{ error: "Email required" },
+				{ status: 400 },
+			);
+		}
+
+		const { resume, jobDescription, sessionId } = await request.json();
 
 		if (!resume || !jobDescription) {
 			return NextResponse.json(
@@ -18,9 +38,16 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Check roast credits if email provided
+		// Check roast credits
 		let roastResult = null;
-		if (email) {
+		if (sessionId) {
+			// Paid session validation
+			const valid = await isPaymentValid(sessionId);
+			if (!valid && process.env.NODE_ENV === "production") {
+				return NextResponse.json({ error: "Invalid or expired payment session" }, { status: 403 });
+			}
+		} else {
+			// Use free roast credits
 			roastResult = await useRoast(email);
 			if (!roastResult.success) {
 				return NextResponse.json({ 
@@ -28,12 +55,6 @@ export async function POST(request: NextRequest) {
 					needsPayment: true,
 					remaining: 0 
 				}, { status: 402 });
-			}
-		} else if (sessionId) {
-			// Paid session validation
-			const valid = await isPaymentValid(sessionId);
-			if (!valid && process.env.NODE_ENV === "production") {
-				return NextResponse.json({ error: "Invalid or expired payment session" }, { status: 403 });
 			}
 		}
 
@@ -138,8 +159,9 @@ Be savage but helpful. Make it entertaining AND genuinely useful. The candidate 
 			// Legacy fields for backwards compat
 			skillGaps: analysis.skillGapHeatmap?.filter((s: { status: string }) => s.status !== "strong").map((s: { skill: string }) => s.skill) || [],
 			createdAt: new Date(),
-			isFreeRoast: !!email,
-			email: email || undefined,
+			isFreeRoast: !sessionId,
+			email: email,
+			userId: userId,
 		});
 
 		// Mark payment as used
