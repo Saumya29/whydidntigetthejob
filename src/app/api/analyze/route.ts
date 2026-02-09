@@ -10,6 +10,14 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
 	try {
+		// Check OpenAI API key first
+		if (!process.env.OPENAI_API_KEY) {
+			return NextResponse.json(
+				{ error: "OpenAI API key not configured. Add OPENAI_API_KEY to environment variables." },
+				{ status: 500 },
+			);
+		}
+
 		// Get authenticated user from Clerk
 		const { userId } = await auth();
 		const user = await currentUser();
@@ -175,6 +183,22 @@ Be savage but helpful. Make it entertaining AND genuinely useful. The candidate 
 		});
 	} catch (error) {
 		console.error("Analysis error:", error);
+		
+		// Return specific error messages for debugging
+		if (error instanceof Error) {
+			// OpenAI errors
+			if (error.message.includes("API key")) {
+				return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 });
+			}
+			if (error.message.includes("quota") || error.message.includes("rate")) {
+				return NextResponse.json({ error: "OpenAI rate limit reached. Try again in a minute." }, { status: 429 });
+			}
+			// Return actual error in development
+			if (process.env.NODE_ENV !== "production") {
+				return NextResponse.json({ error: error.message }, { status: 500 });
+			}
+		}
+		
 		return NextResponse.json({ error: "Failed to analyze. Please try again." }, { status: 500 });
 	}
 }
