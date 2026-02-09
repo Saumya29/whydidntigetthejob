@@ -2,7 +2,7 @@ import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { isPaymentValid, markPaymentUsed, saveResult, useRoast } from "@/lib/storage";
+import { getConvexClient, api } from "@/lib/convex";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const { resume, jobDescription, sessionId } = await request.json();
+		const { resume, jobDescription } = await request.json();
 
 		if (!resume || !jobDescription) {
 			return NextResponse.json(
@@ -46,24 +46,27 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Check roast credits
-		let roastResult = null;
-		if (sessionId) {
-			// Paid session validation
-			const valid = await isPaymentValid(sessionId);
-			if (!valid && process.env.NODE_ENV === "production") {
-				return NextResponse.json({ error: "Invalid or expired payment session" }, { status: 403 });
-			}
-		} else {
-			// Use free roast credits
-			roastResult = await useRoast(email);
-			if (!roastResult.success) {
-				return NextResponse.json({ 
-					error: "No roasts remaining", 
-					needsPayment: true,
-					remaining: 0 
-				}, { status: 402 });
-			}
+		// Initialize Convex client
+		const convex = getConvexClient();
+
+		// Get or create user in Convex
+		await convex.mutation(api.users.getOrCreate, {
+			clerkId: userId,
+			email: email,
+			name: user.fullName || undefined,
+		});
+
+		// Use a roast credit
+		const roastResult = await convex.mutation(api.users.useRoast, {
+			clerkId: userId,
+		});
+
+		if (!roastResult.success) {
+			return NextResponse.json({ 
+				error: "No roasts remaining", 
+				needsPayment: true,
+				remaining: 0 
+			}, { status: 402 });
 		}
 
 		const prompt = `You are a brutally honest hiring manager and recruiter who reviews job applications. A candidate applied for a job and didn't get it. Provide a COMPREHENSIVE analysis.
@@ -150,37 +153,25 @@ Be savage but helpful. Make it entertaining AND genuinely useful. The candidate 
 		const analysis = JSON.parse(content);
 		const id = nanoid(10);
 
-		// Save result with all new fields
-		await saveResult({
-			id,
+		// Save result to Convex
+		await convex.mutation(api.results.save, {
+			resultId: id,
 			grade: analysis.grade,
 			headline: analysis.headline,
 			rejection: analysis.rejection,
-			recruiterNotes: analysis.recruiterNotes || [],
-			skillGapHeatmap: analysis.skillGapHeatmap || [],
-			priorities: analysis.priorities || [],
-			competition: analysis.competition || { estimatedApplicants: 150, estimatedRank: 75, percentile: 50, competitionLevel: "Medium" },
-			bulletRewrite: analysis.bulletRewrite || null,
-			atsScore: analysis.atsScore || { score: 50, issues: [], missingKeywords: [], tips: [] },
+			skillGaps: analysis.skillGapHeatmap?.filter((s: { status: string }) => s.status !== "strong").map((s: { skill: string }) => s.skill) || [],
 			hiringManagerQuote: analysis.hiringManagerQuote,
 			improvements: analysis.improvements,
-			// Legacy fields for backwards compat
-			skillGaps: analysis.skillGapHeatmap?.filter((s: { status: string }) => s.status !== "strong").map((s: { skill: string }) => s.skill) || [],
-			createdAt: new Date(),
-			isFreeRoast: !sessionId,
+			atsScore: analysis.atsScore?.score,
+			isFreeRoast: true,
 			email: email,
 			userId: userId,
 		});
 
-		// Mark payment as used
-		if (sessionId) {
-			await markPaymentUsed(sessionId);
-		}
-
-		// Return full result so client can store it
+		// Return full result for client-side display
 		return NextResponse.json({ 
 			id,
-			remaining: roastResult?.remaining ?? null,
+			remaining: roastResult.remaining,
 			result: {
 				id,
 				grade: analysis.grade,
@@ -200,19 +191,18 @@ Be savage but helpful. Make it entertaining AND genuinely useful. The candidate 
 	} catch (error) {
 		console.error("Analysis error:", error);
 		
-		// Return specific error messages for debugging
 		if (error instanceof Error) {
-			// OpenAI errors
 			if (error.message.includes("API key")) {
 				return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 });
 			}
 			if (error.message.includes("quota") || error.message.includes("rate")) {
 				return NextResponse.json({ error: "OpenAI rate limit reached. Try again in a minute." }, { status: 429 });
 			}
-			// Return actual error in development
-			if (process.env.NODE_ENV !== "production") {
-				return NextResponse.json({ error: error.message }, { status: 500 });
+			if (error.message.includes("CONVEX")) {
+				return NextResponse.json({ error: "Database not configured. Add NEXT_PUBLIC_CONVEX_URL." }, { status: 500 });
 			}
+			// Return actual error for debugging
+			return NextResponse.json({ error: error.message }, { status: 500 });
 		}
 		
 		return NextResponse.json({ error: "Failed to analyze. Please try again." }, { status: 500 });

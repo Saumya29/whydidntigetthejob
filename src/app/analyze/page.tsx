@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser, SignInButton } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +18,19 @@ export default function AnalyzePage() {
 	const [jobDescription, setJobDescription] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [roastsRemaining, setRoastsRemaining] = useState<number | null>(null);
+
+	// Get user stats from Convex
+	const userStats = useQuery(
+		api.users.getStats,
+		isSignedIn && user?.id ? { clerkId: user.id } : "skip"
+	);
+
+	useEffect(() => {
+		if (userStats) {
+			setRoastsRemaining(userStats.roastsRemaining);
+		}
+	}, [userStats]);
 
 	// Show loading while Clerk is initializing
 	if (!isLoaded) {
@@ -75,8 +90,13 @@ export default function AnalyzePage() {
 			if (data.id && data.result) {
 				// Store result in localStorage for the results page
 				localStorage.setItem(`roast_${data.id}`, JSON.stringify(data.result));
+				// Update remaining count
+				if (data.remaining !== undefined) {
+					setRoastsRemaining(data.remaining);
+				}
 				router.push(`/results/${data.id}`);
 			} else if (data.needsPayment) {
+				setRoastsRemaining(0);
 				router.push("/pricing");
 			} else {
 				setError(data.error || "Analysis failed. Please try again.");
@@ -111,6 +131,18 @@ export default function AnalyzePage() {
 						<p className="text-sm text-zinc-500">
 							Signed in as {user.primaryEmailAddress.emailAddress}
 						</p>
+					)}
+					{roastsRemaining !== null && (
+						<div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
+							roastsRemaining > 0 
+								? "bg-zinc-800/50 border border-zinc-700" 
+								: "bg-red-500/20 border border-red-500/30"
+						}`}>
+							<span className="text-lg">🔥</span>
+							<span className={roastsRemaining > 0 ? "text-zinc-300" : "text-red-400"}>
+								<span className="font-bold text-white">{roastsRemaining}</span> roast{roastsRemaining !== 1 ? "s" : ""} remaining
+							</span>
+						</div>
 					)}
 				</div>
 
