@@ -60,6 +60,12 @@ export const getAnalytics = query({
 		const payments = await ctx.db.query("payments").collect();
 		const revenue = payments.filter(p => p.used && p.amount).reduce((sum, p) => sum + (p.amount || 0), 0);
 
+		// Calculate average ATS score (atsScore is now an object with .score)
+		const resultsWithAts = allResults.filter(r => r.atsScore?.score !== undefined);
+		const avgAtsScore = resultsWithAts.length > 0
+			? resultsWithAts.reduce((sum, r) => sum + (r.atsScore?.score || 0), 0) / resultsWithAts.length
+			: 0;
+
 		return {
 			total: allResults.length,
 			today: today.length,
@@ -69,7 +75,7 @@ export const getAnalytics = query({
 			freeCount: allResults.length - paidResults.length,
 			revenue: revenue / 100, // Convert cents to dollars
 			gradeDistribution,
-			averageAtsScore: allResults.filter(r => r.atsScore).reduce((sum, r) => sum + (r.atsScore || 0), 0) / (allResults.filter(r => r.atsScore).length || 1),
+			averageAtsScore: avgAtsScore,
 		};
 	},
 });
@@ -92,7 +98,7 @@ export const getRecentSubmissions = query({
 			grade: r.grade,
 			headline: r.headline,
 			isPaid: r.isPaid || false,
-			atsScore: r.atsScore,
+			atsScore: r.atsScore?.score || null,
 			createdAt: r.createdAt,
 		}));
 	},
