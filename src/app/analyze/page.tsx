@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useUser, SignInButton } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+// import { useQuery } from "convex/react";
+// import { api } from "../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,17 +20,16 @@ export default function AnalyzePage() {
 	const [error, setError] = useState<string | null>(null);
 	const [roastsRemaining, setRoastsRemaining] = useState<number | null>(null);
 
-	// Get user stats from Convex
-	const userStats = useQuery(
-		api.users.getStats,
-		isSignedIn && user?.id ? { clerkId: user.id } : "skip"
-	);
-
-	useEffect(() => {
-		if (userStats) {
-			setRoastsRemaining(userStats.roastsRemaining);
-		}
-	}, [userStats]);
+	// TODO: Get user stats from Convex when deployed
+	// const userStats = useQuery(
+	// 	api.users.getStats,
+	// 	isSignedIn && user?.id ? { clerkId: user.id } : "skip"
+	// );
+	// useEffect(() => {
+	// 	if (userStats) {
+	// 		setRoastsRemaining(userStats.roastsRemaining);
+	// 	}
+	// }, [userStats]);
 
 	// Show loading while Clerk is initializing
 	if (!isLoaded) {

@@ -2,7 +2,6 @@ import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { getConvexClient, api } from "@/lib/convex";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
@@ -46,28 +45,8 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Initialize Convex client
-		const convex = getConvexClient();
-
-		// Get or create user in Convex
-		await convex.mutation(api.users.getOrCreate, {
-			clerkId: userId,
-			email: email,
-			name: user.fullName || undefined,
-		});
-
-		// Use a roast credit
-		const roastResult = await convex.mutation(api.users.useRoast, {
-			clerkId: userId,
-		});
-
-		if (!roastResult.success) {
-			return NextResponse.json({ 
-				error: "No roasts remaining", 
-				needsPayment: true,
-				remaining: 0 
-			}, { status: 402 });
-		}
+		// TODO: Add Convex roast tracking when deployed
+		// For now, unlimited roasts during testing
 
 		const prompt = `You are a brutally honest hiring manager and recruiter who reviews job applications. A candidate applied for a job and didn't get it. Provide a COMPREHENSIVE analysis.
 
@@ -127,7 +106,7 @@ Provide your analysis in the following JSON format:
   "improvements": ["Array of 4-5 specific, actionable improvement tips"]
 }
 
-Be savage but helpful. Make it entertaining AND genuinely useful. The candidate paid $7 for this - give them their money's worth.`;
+Be savage but helpful. Make it entertaining AND genuinely useful.`;
 
 		const completion = await openai.chat.completions.create({
 			model: "gpt-4o",
@@ -153,25 +132,9 @@ Be savage but helpful. Make it entertaining AND genuinely useful. The candidate 
 		const analysis = JSON.parse(content);
 		const id = nanoid(10);
 
-		// Save result to Convex
-		await convex.mutation(api.results.save, {
-			resultId: id,
-			grade: analysis.grade,
-			headline: analysis.headline,
-			rejection: analysis.rejection,
-			skillGaps: analysis.skillGapHeatmap?.filter((s: { status: string }) => s.status !== "strong").map((s: { skill: string }) => s.skill) || [],
-			hiringManagerQuote: analysis.hiringManagerQuote,
-			improvements: analysis.improvements,
-			atsScore: analysis.atsScore?.score,
-			isFreeRoast: true,
-			email: email,
-			userId: userId,
-		});
-
-		// Return full result for client-side display
+		// Return full result for client-side storage
 		return NextResponse.json({ 
 			id,
-			remaining: roastResult.remaining,
 			result: {
 				id,
 				grade: analysis.grade,
@@ -198,10 +161,6 @@ Be savage but helpful. Make it entertaining AND genuinely useful. The candidate 
 			if (error.message.includes("quota") || error.message.includes("rate")) {
 				return NextResponse.json({ error: "OpenAI rate limit reached. Try again in a minute." }, { status: 429 });
 			}
-			if (error.message.includes("CONVEX")) {
-				return NextResponse.json({ error: "Database not configured. Add NEXT_PUBLIC_CONVEX_URL." }, { status: 500 });
-			}
-			// Return actual error for debugging
 			return NextResponse.json({ error: error.message }, { status: 500 });
 		}
 		
