@@ -1,48 +1,76 @@
-import type { Metadata } from "next";
+"use client";
+
 import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { ShareButtons } from "@/components/share-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getResult, type AnalysisResult, type SkillGap, type Priority, type RecruiterNote, type ATSScore } from "@/lib/storage";
 
-interface Props {
-	params: Promise<{ id: string }>;
-	searchParams: Promise<{ free?: string; email?: string }>;
+interface SkillGap {
+	skill: string;
+	status: "missing" | "weak" | "strong";
+	jdMention: boolean;
+	resumeMention: boolean;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://whydidntigetthejob.com";
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-	const { id } = await params;
-	const result = await getResult(id);
-
-	if (!result) {
-		return { title: "Results Not Found | WhyDidntIGetTheJob" };
-	}
-
-	const title = `Roast Grade: ${result.grade} | WhyDidntIGetTheJob`;
-	const description = result.headline;
-	const ogImageUrl = `${BASE_URL}/api/og/${id}`;
-
-	return {
-		title,
-		description,
-		openGraph: {
-			title,
-			description,
-			type: "website",
-			url: `${BASE_URL}/results/${id}`,
-			images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `Job rejection analysis - Grade ${result.grade}` }],
-		},
-		twitter: {
-			card: "summary_large_image",
-			title,
-			description,
-			images: [ogImageUrl],
-		},
-	};
+interface Priority {
+	rank: number;
+	issue: string;
+	effort: "Low" | "Medium" | "High";
+	impact: "Low" | "Medium" | "High";
+	action: string;
 }
+
+interface RecruiterNote {
+	section: string;
+	note: string;
+}
+
+interface ATSIssue {
+	category: string;
+	issue: string;
+	severity: "Critical" | "Warning" | "Minor";
+}
+
+interface ATSScore {
+	score: number;
+	issues: ATSIssue[];
+	missingKeywords: string[];
+	tips: string[];
+}
+
+interface Competition {
+	estimatedApplicants: number;
+	estimatedRank: number;
+	percentile: number;
+	competitionLevel: "Low" | "Medium" | "High" | "Extreme";
+}
+
+interface BulletRewrite {
+	before: string;
+	after: string;
+	why: string;
+}
+
+interface AnalysisResult {
+	id: string;
+	grade: string;
+	headline: string;
+	rejection: string;
+	recruiterNotes: RecruiterNote[];
+	skillGapHeatmap: SkillGap[];
+	priorities: Priority[];
+	competition: Competition;
+	bulletRewrite: BulletRewrite | null;
+	atsScore: ATSScore;
+	hiringManagerQuote: string;
+	improvements: string[];
+	skillGaps: string[];
+}
+
+const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://whydidntigetthejob.vercel.app";
 
 // Grade color mapping
 const gradeColors: Record<string, { bg: string; text: string; ring: string }> = {
@@ -138,7 +166,7 @@ function RecruiterNotesSection({ notes }: { notes: RecruiterNote[] }) {
 }
 
 // Competition Score Component
-function CompetitionScore({ competition }: { competition: AnalysisResult["competition"] }) {
+function CompetitionScore({ competition }: { competition: Competition }) {
 	const levelColors = {
 		Low: "text-green-400",
 		Medium: "text-yellow-400",
@@ -186,7 +214,7 @@ function ATSScoreSection({ ats }: { ats: ATSScore }) {
 		return "from-red-500/20 to-red-500/5";
 	};
 
-	const severityColors = {
+	const severityColors: Record<string, string> = {
 		Critical: "bg-red-500/20 text-red-400 border-red-500/30",
 		Warning: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
 		Minor: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
@@ -194,13 +222,11 @@ function ATSScoreSection({ ats }: { ats: ATSScore }) {
 
 	return (
 		<div className="space-y-4">
-			{/* Score Display */}
 			<div className={`bg-gradient-to-r ${getScoreBg(ats.score)} rounded-xl p-6 text-center`}>
 				<p className={`text-6xl font-black ${getScoreColor(ats.score)}`}>{ats.score}</p>
 				<p className="text-zinc-400 text-sm mt-1">ATS Compatibility Score</p>
 			</div>
 
-			{/* Issues */}
 			{ats.issues && ats.issues.length > 0 && (
 				<div className="space-y-2">
 					<p className="text-zinc-500 text-xs uppercase tracking-wide">Issues Found</p>
@@ -216,7 +242,6 @@ function ATSScoreSection({ ats }: { ats: ATSScore }) {
 				</div>
 			)}
 
-			{/* Missing Keywords */}
 			{ats.missingKeywords && ats.missingKeywords.length > 0 && (
 				<div>
 					<p className="text-zinc-500 text-xs uppercase tracking-wide mb-2">Missing Keywords</p>
@@ -230,7 +255,6 @@ function ATSScoreSection({ ats }: { ats: ATSScore }) {
 				</div>
 			)}
 
-			{/* Tips */}
 			{ats.tips && ats.tips.length > 0 && (
 				<div>
 					<p className="text-zinc-500 text-xs uppercase tracking-wide mb-2">ATS Optimization Tips</p>
@@ -249,9 +273,7 @@ function ATSScoreSection({ ats }: { ats: ATSScore }) {
 }
 
 // Bullet Rewrite Component
-function BulletRewriteSection({ rewrite }: { rewrite: AnalysisResult["bulletRewrite"] }) {
-	if (!rewrite) return null;
-
+function BulletRewriteSection({ rewrite }: { rewrite: BulletRewrite }) {
 	return (
 		<div className="space-y-4">
 			<div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
@@ -271,18 +293,37 @@ function BulletRewriteSection({ rewrite }: { rewrite: AnalysisResult["bulletRewr
 	);
 }
 
-import { getRoastsRemaining } from "@/lib/storage";
+export default function ResultsPage() {
+	const params = useParams();
+	const id = params.id as string;
+	const [result, setResult] = useState<AnalysisResult | null>(null);
+	const [loading, setLoading] = useState(true);
 
-export default async function ResultsPage({ params, searchParams }: Props) {
-	const { id } = await params;
-	const { free, email } = await searchParams;
-	const result = await getResult(id);
-	const isFreeRoast = free === "1" || result?.isFreeRoast;
-	
-	// Get remaining roasts if email provided
-	let roastsRemaining: number | null = null;
-	if (email) {
-		roastsRemaining = await getRoastsRemaining(email);
+	useEffect(() => {
+		// Try to load from localStorage
+		const stored = localStorage.getItem(`roast_${id}`);
+		if (stored) {
+			try {
+				setResult(JSON.parse(stored));
+			} catch {
+				console.error("Failed to parse stored result");
+			}
+		}
+		setLoading(false);
+	}, [id]);
+
+	if (loading) {
+		return (
+			<main className="min-h-screen flex items-center justify-center">
+				<div className="flex items-center gap-3 text-zinc-400">
+					<svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+						<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+					</svg>
+					Loading your roast...
+				</div>
+			</main>
+		);
 	}
 
 	if (!result) {
@@ -304,38 +345,6 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 	return (
 		<main className="min-h-screen p-4 py-8 md:py-12">
 			<div className="max-w-3xl mx-auto space-y-6">
-				{/* Remaining Roasts Banner */}
-				{email && roastsRemaining !== null && (
-					<div className={`rounded-2xl p-4 text-center ${
-						roastsRemaining > 0 
-							? "bg-zinc-800/50 border border-zinc-700" 
-							: "bg-gradient-to-r from-red-600/20 to-orange-600/20 border border-red-500/30"
-					}`}>
-						{roastsRemaining > 0 ? (
-							<>
-								<p className="text-zinc-300">
-									🔥 <span className="font-bold text-white">{roastsRemaining}</span> roast{roastsRemaining !== 1 ? "s" : ""} remaining
-								</p>
-								<Link href={`/analyze?email=${encodeURIComponent(email)}`} className="text-red-400 text-sm hover:underline">
-									Roast another application →
-								</Link>
-							</>
-						) : (
-							<>
-								<p className="text-xl font-bold text-white mb-2">🔥 You&apos;ve used all your roasts!</p>
-								<p className="text-zinc-300 mb-3">
-									Get more roasts to keep improving.
-								</p>
-								<Link href={`/pricing?email=${encodeURIComponent(email)}`}>
-									<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white px-8">
-										Get 10 Roasts for $5 →
-									</Button>
-								</Link>
-							</>
-						)}
-					</div>
-				)}
-
 				{/* Header */}
 				<div className="text-center space-y-2">
 					<Badge variant="outline" className="text-red-400 border-red-400/50">
@@ -344,7 +353,7 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 					<h1 className="text-2xl md:text-3xl font-bold">The Verdict Is In</h1>
 				</div>
 
-				{/* 1. GRADE CARD - Big and prominent */}
+				{/* 1. GRADE CARD */}
 				<Card className={`bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 overflow-hidden ring-2 ${gradeStyle.ring}`}>
 					<CardContent className="p-6 md:p-8">
 						<div className="flex items-center justify-between gap-4">
@@ -369,7 +378,6 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
 								🤖 ATS Compatibility
 							</CardTitle>
-							<p className="text-zinc-500 text-sm">How well your resume passes automated screening</p>
 						</CardHeader>
 						<CardContent>
 							<ATSScoreSection ats={result.atsScore} />
@@ -398,7 +406,6 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
 								🎯 Skill Gap Analysis
 							</CardTitle>
-							<p className="text-zinc-500 text-sm">JD requirements vs your resume</p>
 						</CardHeader>
 						<CardContent>
 							<SkillGapHeatmap skills={result.skillGapHeatmap} />
@@ -406,14 +413,13 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 					</Card>
 				)}
 
-				{/* 4. FIX THIS FIRST - Priority List */}
+				{/* 5. FIX THIS FIRST */}
 				{result.priorities && result.priorities.length > 0 && (
 					<Card className="bg-zinc-900 border-zinc-800">
 						<CardHeader className="pb-2">
 							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
 								🚨 Fix This First
 							</CardTitle>
-							<p className="text-zinc-500 text-sm">Ranked by impact</p>
 						</CardHeader>
 						<CardContent>
 							<PriorityList priorities={result.priorities} />
@@ -421,14 +427,13 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 					</Card>
 				)}
 
-				{/* 5. BULLET REWRITE - Free sample */}
+				{/* 6. BULLET REWRITE */}
 				{result.bulletRewrite && (
 					<Card className="bg-zinc-900 border-zinc-800">
 						<CardHeader className="pb-2">
 							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
 								✨ Free Rewrite
 							</CardTitle>
-							<p className="text-zinc-500 text-sm">Your worst bullet, fixed</p>
 						</CardHeader>
 						<CardContent>
 							<BulletRewriteSection rewrite={result.bulletRewrite} />
@@ -436,14 +441,13 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 					</Card>
 				)}
 
-				{/* 6. RECRUITER NOTES */}
+				{/* 7. RECRUITER NOTES */}
 				{result.recruiterNotes && result.recruiterNotes.length > 0 && (
 					<Card className="bg-zinc-900 border-zinc-800">
 						<CardHeader className="pb-2">
 							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
-								📝 What the Recruiter Actually Thought
+								📝 Recruiter Notes
 							</CardTitle>
-							<p className="text-zinc-500 text-sm">Internal notes (simulated)</p>
 						</CardHeader>
 						<CardContent>
 							<RecruiterNotesSection notes={result.recruiterNotes} />
@@ -451,7 +455,7 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 					</Card>
 				)}
 
-				{/* 7. THE BRUTAL TRUTH */}
+				{/* 8. THE BRUTAL TRUTH */}
 				<Card className="bg-zinc-900 border-zinc-800">
 					<CardHeader className="pb-2">
 						<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
@@ -460,7 +464,6 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<p className="text-zinc-300 whitespace-pre-wrap leading-relaxed">{result.rejection}</p>
-						
 						<div className="bg-zinc-950 rounded-lg p-4 border border-zinc-800">
 							<p className="text-zinc-500 text-xs uppercase tracking-wide mb-2">
 								Hiring manager&apos;s hot take:
@@ -470,7 +473,7 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 					</CardContent>
 				</Card>
 
-				{/* 8. HOW TO ACTUALLY GET HIRED */}
+				{/* 9. HOW TO ACTUALLY GET HIRED */}
 				<Card className="bg-zinc-900 border-zinc-800">
 					<CardHeader className="pb-2">
 						<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
@@ -491,21 +494,9 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 					</CardContent>
 				</Card>
 
-				{/* DOWNLOAD & SHARE SECTION */}
+				{/* SHARE SECTION */}
 				<Card className="bg-zinc-900 border-zinc-800">
 					<CardContent className="p-6 space-y-4">
-						<div className="flex flex-col sm:flex-row gap-4 justify-center">
-							<a
-								href={`/api/pdf/${id}`}
-								download
-								className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-medium transition-colors"
-							>
-								<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-								</svg>
-								Download PDF Report
-							</a>
-						</div>
 						<div className="border-t border-zinc-800 pt-4">
 							<p className="text-zinc-400 text-sm text-center mb-3">Share your roast (if you dare)</p>
 							<ShareButtons grade={result.grade} url={`${BASE_URL}/results/${id}`} />
@@ -515,27 +506,10 @@ export default async function ResultsPage({ params, searchParams }: Props) {
 
 				{/* CTA */}
 				<div className="text-center pt-6 border-t border-zinc-800">
-					{isFreeRoast ? (
-						<div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 space-y-4">
-							<p className="text-xl font-bold">Ready to level up your job search?</p>
-							<p className="text-zinc-400">
-								You've seen how it works. Now unlock 3 roasts to perfect every application.
-							</p>
-							<Link href="/checkout">
-								<Button size="lg" className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg">
-									Get 3 roasts — $5
-								</Button>
-							</Link>
-							<p className="text-sm text-zinc-500">One-time payment • Roast as many applications as you want</p>
-						</div>
-					) : (
-						<>
-							<p className="text-zinc-500 mb-4">Got another rejection to process?</p>
-							<Link href="/analyze">
-								<Button className="bg-red-600 hover:bg-red-700">Get Roasted Again</Button>
-							</Link>
-						</>
-					)}
+					<p className="text-zinc-500 mb-4">Got another rejection to process?</p>
+					<Link href="/analyze">
+						<Button className="bg-red-600 hover:bg-red-700">Get Roasted Again</Button>
+					</Link>
 				</div>
 			</div>
 		</main>

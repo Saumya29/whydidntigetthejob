@@ -177,9 +177,25 @@ Be savage but helpful. Make it entertaining AND genuinely useful. The candidate 
 			await markPaymentUsed(sessionId);
 		}
 
+		// Return full result so client can store it
 		return NextResponse.json({ 
 			id,
 			remaining: roastResult?.remaining ?? null,
+			result: {
+				id,
+				grade: analysis.grade,
+				headline: analysis.headline,
+				rejection: analysis.rejection,
+				recruiterNotes: analysis.recruiterNotes || [],
+				skillGapHeatmap: analysis.skillGapHeatmap || [],
+				priorities: analysis.priorities || [],
+				competition: analysis.competition || { estimatedApplicants: 150, estimatedRank: 75, percentile: 50, competitionLevel: "Medium" },
+				bulletRewrite: analysis.bulletRewrite || null,
+				atsScore: analysis.atsScore || { score: 50, issues: [], missingKeywords: [], tips: [] },
+				hiringManagerQuote: analysis.hiringManagerQuote,
+				improvements: analysis.improvements,
+				skillGaps: analysis.skillGapHeatmap?.filter((s: { status: string }) => s.status !== "strong").map((s: { skill: string }) => s.skill) || [],
+			}
 		});
 	} catch (error) {
 		console.error("Analysis error:", error);

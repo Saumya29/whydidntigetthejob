@@ -72,7 +72,9 @@ export default function AnalyzePage() {
 
 			const data = await res.json();
 
-			if (data.id) {
+			if (data.id && data.result) {
+				// Store result in localStorage for the results page
+				localStorage.setItem(`roast_${data.id}`, JSON.stringify(data.result));
 				router.push(`/results/${data.id}`);
 			} else if (data.needsPayment) {
 				router.push("/pricing");
