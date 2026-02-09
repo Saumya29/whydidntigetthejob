@@ -21,6 +21,7 @@ const isPublicRoute = createRouteMatcher([
 	"/api/og/(.*)",
 	"/api/pdf/(.*)",
 	"/api/admin/(.*)",
+	"/api/user/check", // Allow unauthenticated users to check/create account
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
