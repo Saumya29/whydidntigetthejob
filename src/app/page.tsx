@@ -1,10 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 const exampleRoasts = [
 	{
@@ -31,55 +29,6 @@ const exampleRoasts = [
 ];
 
 export default function Home() {
-	const router = useRouter();
-	const [email, setEmail] = useState("");
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	const validateEmail = (email: string) => {
-		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-	};
-
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		
-		if (!email.trim()) {
-			setError("Enter your email to get started");
-			return;
-		}
-		
-		if (!validateEmail(email)) {
-			setError("Please enter a valid email");
-			return;
-		}
-
-		setLoading(true);
-		setError(null);
-
-		try {
-			// Check/create user account
-			const res = await fetch("/api/user/check", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ email: email.toLowerCase().trim() }),
-			});
-
-			const data = await res.json();
-
-			if (data.roastsRemaining > 0) {
-				// Has roasts available - go to analyze
-				router.push(`/analyze?email=${encodeURIComponent(email)}`);
-			} else {
-				// No roasts - go to pricing
-				router.push(`/pricing?email=${encodeURIComponent(email)}`);
-			}
-		} catch {
-			setError("Something went wrong. Please try again.");
-		} finally {
-			setLoading(false);
-		}
-	};
-
 	return (
 		<main className="min-h-screen flex flex-col items-center justify-center p-4">
 			<div className="max-w-2xl mx-auto text-center space-y-8">
@@ -114,38 +63,18 @@ export default function Home() {
 					</div>
 				</div>
 
-				{/* Inline Email CTA */}
-				<form onSubmit={handleSubmit} className="space-y-4">
-					<div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-						<Input
-							type="email"
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
-							placeholder="Enter your email"
-							className="flex-1 bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-500 h-12 text-base"
-							disabled={loading}
-						/>
+				{/* Simple CTA */}
+				<div className="space-y-4">
+					<Link href="/sign-up">
 						<Button
-							type="submit"
-							disabled={loading}
 							size="lg"
-							className="bg-red-600 hover:bg-red-700 text-white px-6 h-12 whitespace-nowrap"
+							className="bg-red-600 hover:bg-red-700 text-white px-8 h-14 text-lg"
 						>
-							{loading ? (
-								<span className="flex items-center gap-2">
-									<svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-										<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-										<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-									</svg>
-								</span>
-							) : (
-								"Get Roasted Free 🔥"
-							)}
+							Get Roasted Free 🔥
 						</Button>
-					</div>
-					{error && <p className="text-red-400 text-sm">{error}</p>}
+					</Link>
 					<p className="text-sm text-zinc-500">3 free roasts • No credit card required</p>
-				</form>
+				</div>
 
 				{/* Example Roasts */}
 				<div className="pt-12 space-y-6">
@@ -220,13 +149,14 @@ export default function Home() {
 
 				{/* Bottom CTA */}
 				<div className="pb-8">
-					<Button
-						onClick={() => document.querySelector('input')?.focus()}
-						size="lg"
-						className="bg-red-600 hover:bg-red-700 text-white"
-					>
-						Try Your First Roast Free →
-					</Button>
+					<Link href="/sign-up">
+						<Button
+							size="lg"
+							className="bg-red-600 hover:bg-red-700 text-white"
+						>
+							Try Your First Roast Free →
+						</Button>
+					</Link>
 				</div>
 			</div>
 		</main>
