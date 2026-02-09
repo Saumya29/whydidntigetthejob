@@ -32,10 +32,12 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.14",
+		"@resvg/resvg-js": "^2.6.2",
 		"@types/node": "^20",
 		"@types/react": "^18",
 		"@types/react-dom": "^18",
 		"postcss": "^8",
+		"sharp": "^0.34.5",
 		"tailwindcss": "^3.4.1",
 		"typescript": "^5"
 	}

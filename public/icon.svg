@@ -1,16 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <defs>
-    <linearGradient id="fire" x1="0%" y1="100%" x2="0%" y2="0%">
-      <stop offset="0%" style="stop-color:#dc2626"/>
-      <stop offset="50%" style="stop-color:#f97316"/>
-      <stop offset="100%" style="stop-color:#fbbf24"/>
+    <linearGradient id="flame" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#dc2626"/>
+      <stop offset="60%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
     </linearGradient>
   </defs>
-  <!-- Fire emoji style -->
-  <path fill="url(#fire)" d="M50 5C50 5 35 25 35 45C35 55 40 60 45 65C40 60 38 50 45 40C45 40 50 50 50 60C50 60 55 50 55 40C62 50 60 60 55 65C60 60 65 55 65 45C65 25 50 5 50 5Z"/>
-  <!-- Document behind -->
-  <rect x="25" y="55" width="50" height="40" rx="4" fill="#27272a" stroke="#3f3f46" stroke-width="2"/>
-  <line x1="32" y1="65" x2="68" y2="65" stroke="#52525b" stroke-width="3"/>
-  <line x1="32" y1="75" x2="60" y2="75" stroke="#52525b" stroke-width="3"/>
-  <line x1="32" y1="85" x2="55" y2="85" stroke="#52525b" stroke-width="3"/>
+  <!-- Bold flame -->
+  <path fill="url(#flame)" d="M16 2C16 2 8 10 8 18C8 23.5 11.5 28 16 28C20.5 28 24 23.5 24 18C24 10 16 2 16 2ZM16 24C13.8 24 12 22 12 19.5C12 17 14 14 16 12C18 14 20 17 20 19.5C20 22 18.2 24 16 24Z"/>
 </svg>
