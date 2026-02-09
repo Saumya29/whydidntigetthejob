@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+
+// Map Convex result to component interface
 import { ShareButtons } from "@/components/share-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,7 +58,7 @@ interface BulletRewrite {
 }
 
 interface AnalysisResult {
-	id: string;
+	resultId: string;
 	grade: string;
 	headline: string;
 	rejection: string;
@@ -296,23 +299,12 @@ function BulletRewriteSection({ rewrite }: { rewrite: BulletRewrite }) {
 export default function ResultsPage() {
 	const params = useParams();
 	const id = params.id as string;
-	const [result, setResult] = useState<AnalysisResult | null>(null);
-	const [loading, setLoading] = useState(true);
-
-	useEffect(() => {
-		// Try to load from localStorage
-		const stored = localStorage.getItem(`roast_${id}`);
-		if (stored) {
-			try {
-				setResult(JSON.parse(stored));
-			} catch {
-				console.error("Failed to parse stored result");
-			}
-		}
-		setLoading(false);
-	}, [id]);
-
-	if (loading) {
+	
+	// Fetch from Convex
+	const result = useQuery(api.results.getById, { resultId: id });
+	
+	// Loading state (result is undefined while loading)
+	if (result === undefined) {
 		return (
 			<main className="min-h-screen flex items-center justify-center">
 				<div className="flex items-center gap-3 text-zinc-400">

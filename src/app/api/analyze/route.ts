@@ -2,10 +2,14 @@ import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../../convex/_generated/api";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
 });
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: NextRequest) {
 	try {
@@ -13,6 +17,14 @@ export async function POST(request: NextRequest) {
 		if (!process.env.OPENAI_API_KEY) {
 			return NextResponse.json(
 				{ error: "OpenAI API key not configured. Add OPENAI_API_KEY to environment variables." },
+				{ status: 500 },
+			);
+		}
+
+		// Check Convex URL
+		if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+			return NextResponse.json(
+				{ error: "Convex not configured. Add NEXT_PUBLIC_CONVEX_URL to environment variables." },
 				{ status: 500 },
 			);
 		}
@@ -45,8 +57,19 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// TODO: Add Convex roast tracking when deployed
-		// For now, unlimited roasts during testing
+		// Get or create user in Convex and check roasts remaining
+		const dbUser = await convex.mutation(api.users.getOrCreate, {
+			clerkId: userId,
+			email: email,
+			name: user.fullName || undefined,
+		});
+
+		if (!dbUser || dbUser.roastsRemaining <= 0) {
+			return NextResponse.json(
+				{ needsPayment: true, error: "No roasts remaining. Please upgrade to continue." },
+				{ status: 402 },
+			);
+		}
 
 		const prompt = `You are a brutally honest hiring manager and recruiter who reviews job applications. A candidate applied for a job and didn't get it. Provide a COMPREHENSIVE analysis.
 
@@ -96,7 +119,7 @@ Provide your analysis in the following JSON format:
   "atsScore": {
     "score": number (0-100, how well this resume would pass ATS systems),
     "issues": [
-      { "category": "Keywords" | "Formatting" | "Sections" | "Length" | "Contact Info", "issue": "Specific ATS issue", "severity": "Critical" | "Warning" | "Minor" }
+      { "category": "Keywords" | "Formatting" | "Sections" | "Length" | "Contact Info", "severity": "Critical" | "Warning" | "Minor", "issue": "Specific ATS issue" }
     ],
     "missingKeywords": ["Array of important keywords from JD missing in resume"],
     "tips": ["Array of 3 ATS optimization tips"]
@@ -130,26 +153,38 @@ Be savage but helpful. Make it entertaining AND genuinely useful.`;
 		}
 
 		const analysis = JSON.parse(content);
-		const id = nanoid(10);
+		const resultId = nanoid(10);
 
-		// Return full result for client-side storage
+		// Build the result object
+		const result = {
+			resultId,
+			clerkId: userId,
+			email,
+			grade: analysis.grade,
+			headline: analysis.headline,
+			rejection: analysis.rejection,
+			hiringManagerQuote: analysis.hiringManagerQuote,
+			improvements: analysis.improvements || [],
+			skillGaps: analysis.skillGapHeatmap?.filter((s: { status: string }) => s.status !== "strong").map((s: { skill: string }) => s.skill) || [],
+			recruiterNotes: analysis.recruiterNotes || [],
+			skillGapHeatmap: analysis.skillGapHeatmap || [],
+			priorities: analysis.priorities || [],
+			competition: analysis.competition || { estimatedApplicants: 150, estimatedRank: 75, percentile: 50, competitionLevel: "Medium" as const },
+			bulletRewrite: analysis.bulletRewrite || null,
+			atsScore: analysis.atsScore || { score: 50, issues: [], missingKeywords: [], tips: [] },
+			isFreeRoast: true,
+		};
+
+		// Save to Convex
+		await convex.mutation(api.results.save, result);
+
+		// Use a roast
+		const roastResult = await convex.mutation(api.users.useRoast, { clerkId: userId });
+
+		// Return the result ID for redirect
 		return NextResponse.json({ 
-			id,
-			result: {
-				id,
-				grade: analysis.grade,
-				headline: analysis.headline,
-				rejection: analysis.rejection,
-				recruiterNotes: analysis.recruiterNotes || [],
-				skillGapHeatmap: analysis.skillGapHeatmap || [],
-				priorities: analysis.priorities || [],
-				competition: analysis.competition || { estimatedApplicants: 150, estimatedRank: 75, percentile: 50, competitionLevel: "Medium" },
-				bulletRewrite: analysis.bulletRewrite || null,
-				atsScore: analysis.atsScore || { score: 50, issues: [], missingKeywords: [], tips: [] },
-				hiringManagerQuote: analysis.hiringManagerQuote,
-				improvements: analysis.improvements,
-				skillGaps: analysis.skillGapHeatmap?.filter((s: { status: string }) => s.status !== "strong").map((s: { skill: string }) => s.skill) || [],
-			}
+			id: resultId,
+			remaining: roastResult.remaining,
 		});
 	} catch (error) {
 		console.error("Analysis error:", error);

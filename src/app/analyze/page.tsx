@@ -86,13 +86,12 @@ export default function AnalyzePage() {
 
 			const data = await res.json();
 
-			if (data.id && data.result) {
-				// Store result in localStorage for the results page
-				localStorage.setItem(`roast_${data.id}`, JSON.stringify(data.result));
+			if (data.id) {
 				// Update remaining count
 				if (data.remaining !== undefined) {
 					setRoastsRemaining(data.remaining);
 				}
+				// Redirect to results - data is stored in Convex
 				router.push(`/results/${data.id}`);
 			} else if (data.needsPayment) {
 				setRoastsRemaining(0);
