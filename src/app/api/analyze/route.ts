@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../convex/_generated/api";
+import { checkRateLimit, getIP } from "@/lib/rate-limit";
 
 const openai = new OpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
@@ -13,6 +14,28 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: NextRequest) {
 	try {
+		// Rate limiting
+		const ip = getIP(request);
+		const rateLimitResult = await checkRateLimit(`analyze:${ip}`);
+		
+		if (!rateLimitResult.success) {
+			return NextResponse.json(
+				{ 
+					error: "Too many requests. Please wait a minute before trying again.",
+					retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
+				},
+				{ 
+					status: 429,
+					headers: {
+						"X-RateLimit-Limit": rateLimitResult.limit.toString(),
+						"X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+						"X-RateLimit-Reset": rateLimitResult.reset.toString(),
+						"Retry-After": Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString(),
+					},
+				},
+			);
+		}
+
 		// Check OpenAI API key first
 		if (!process.env.OPENAI_API_KEY) {
 			return NextResponse.json(

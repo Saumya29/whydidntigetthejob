@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFParse } from "pdf-parse";
+import { checkRateLimit, getIP } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -8,6 +9,17 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
 	try {
+		// Rate limiting (more lenient for PDF parsing - 20/min)
+		const ip = getIP(req);
+		const rateLimitResult = await checkRateLimit(`parse:${ip}`);
+		
+		if (!rateLimitResult.success) {
+			return NextResponse.json(
+				{ error: "Too many uploads. Please wait a minute." },
+				{ status: 429 },
+			);
+		}
+
 		const formData = await req.formData();
 		const file = formData.get("file") as File | null;
 
