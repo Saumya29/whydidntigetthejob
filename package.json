@@ -16,6 +16,8 @@
 		"@radix-ui/react-slot": "^1.2.4",
 		"@stripe/stripe-js": "^8.7.0",
 		"@types/pdf-parse": "^1.1.5",
+		"@upstash/ratelimit": "^2.0.8",
+		"@upstash/redis": "^1.36.2",
 		"@vercel/og": "^0.8.6",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
