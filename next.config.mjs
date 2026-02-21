@@ -5,6 +5,7 @@ const nextConfig = {
 	eslint: {
 		ignoreDuringBuilds: true,
 	},
+	serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
 };
 
 export default withSentryConfig(nextConfig, {
