@@ -28,7 +28,7 @@ export function Header() {
 								</Button>
 							</Link>
 							<Link href="/dashboard">
-								<Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white">
+								<Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white hover:bg-zinc-800">
 									Dashboard
 								</Button>
 							</Link>
