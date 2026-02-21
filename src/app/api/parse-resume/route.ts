@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { PDFParse } = require("pdf-parse");
+import { type NextRequest, NextResponse } from "next/server";
+import { extractText, getDocumentProxy } from "unpdf";
 import { checkRateLimit, getIP } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -41,21 +40,31 @@ export async function POST(req: NextRequest) {
 		}
 
 		const arrayBuffer = await file.arrayBuffer();
-		const buffer = Buffer.from(arrayBuffer);
+		const buffer = new Uint8Array(arrayBuffer);
 
-		const parser = new PDFParse({ data: buffer });
-		const result = await parser.getText();
+		const pdf = await getDocumentProxy(buffer);
+		// Don't use mergePages — it collapses all whitespace into single spaces
+		const { totalPages, text: rawPages } = await extractText(pdf, { mergePages: false });
 
-		if (!result.text || result.text.trim().length === 0) {
+		const pages = Array.isArray(rawPages) ? rawPages : [rawPages];
+		const extractedText = pages
+			.map((page) => (typeof page === "string" ? page.trim() : ""))
+			.filter(Boolean)
+			.join("\n\n");
+
+		if (!extractedText || extractedText.trim().length === 0) {
 			return NextResponse.json(
 				{ error: "Could not extract text from PDF. Please try pasting your resume instead." },
 				{ status: 400 },
 			);
 		}
 
-		let text = result.text
+		let text = extractedText
 			.replace(/\r\n/g, "\n")
+			// Collapse runs of 3+ blank lines into 2
 			.replace(/\n{3,}/g, "\n\n")
+			// Fix lines that are just whitespace
+			.replace(/\n[ \t]+\n/g, "\n\n")
 			.trim();
 
 		if (text.length > 50000) {
@@ -64,7 +73,7 @@ export async function POST(req: NextRequest) {
 
 		return NextResponse.json({
 			text,
-			pages: result.total,
+			pages: totalPages,
 			chars: text.length,
 		});
 	} catch (error) {

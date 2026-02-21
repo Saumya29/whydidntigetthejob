@@ -18,11 +18,15 @@ export default function AnalyzePage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [roastsRemaining, setRoastsRemaining] = useState<number | null>(null);
-	
+
 	// PDF upload state
 	const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 	const [uploading, setUploading] = useState(false);
 	const [dragActive, setDragActive] = useState(false);
+	const [uploadProgress, setUploadProgress] = useState("");
+
+	// Tab state for resume input mode
+	const [resumeMode, setResumeMode] = useState<"upload" | "paste">("upload");
 
 	// Handle file upload
 	const processFile = useCallback(async (file: File) => {
@@ -41,15 +45,22 @@ export default function AnalyzePage() {
 		setUploading(true);
 		setError(null);
 		setUploadedFile(file);
+		setUploadProgress("Uploading PDF...");
 
 		try {
 			const formData = new FormData();
 			formData.append("file", file);
 
+			// Show parsing step after a short delay
+			const progressTimer = setTimeout(() => setUploadProgress("Extracting text..."), 800);
+
 			const res = await fetch("/api/parse-resume", {
 				method: "POST",
 				body: formData,
 			});
+
+			clearTimeout(progressTimer);
+			setUploadProgress("Processing...");
 
 			const data = await res.json();
 
@@ -64,6 +75,7 @@ export default function AnalyzePage() {
 			setUploadedFile(null);
 		} finally {
 			setUploading(false);
+			setUploadProgress("");
 		}
 	}, []);
 
@@ -205,8 +217,8 @@ export default function AnalyzePage() {
 					)}
 					{roastsRemaining !== null && (
 						<div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-							roastsRemaining > 0 
-								? "bg-zinc-800/50 border border-zinc-700" 
+							roastsRemaining > 0
+								? "bg-zinc-800/50 border border-zinc-700"
 								: "bg-red-500/20 border border-red-500/30"
 						}`}>
 							<span className="text-lg">🔥</span>
@@ -231,100 +243,143 @@ export default function AnalyzePage() {
 										{resume.length > 0 ? `${resume.length} chars` : "Required"}
 									</span>
 								</div>
-								
-								{/* PDF Upload Zone */}
-								{!uploadedFile && !resume && (
-									<div
-										onDragEnter={handleDrag}
-										onDragLeave={handleDrag}
-										onDragOver={handleDrag}
-										onDrop={handleDrop}
-										className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
-											dragActive
-												? "border-red-500 bg-red-500/10"
-												: "border-zinc-700 hover:border-zinc-600 bg-zinc-950"
+
+								{/* Tabs */}
+								<div className="flex border-b border-zinc-800">
+									<button
+										type="button"
+										onClick={() => {
+											if (resumeMode !== "upload") {
+												setResumeMode("upload");
+												setResume("");
+											}
+										}}
+										className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+											resumeMode === "upload"
+												? "text-red-400"
+												: "text-zinc-500 hover:text-zinc-300"
 										}`}
 									>
-										<input
-											type="file"
-											accept=".pdf,application/pdf"
-											onChange={handleFileSelect}
-											className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-											disabled={uploading || loading}
-										/>
-										{uploading ? (
-											<div className="flex flex-col items-center gap-3 py-4">
-												<svg className="animate-spin h-8 w-8 text-red-500" viewBox="0 0 24 24">
-													<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-													<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-												</svg>
-												<p className="text-zinc-400">Parsing PDF...</p>
+										<Upload className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
+										Upload PDF
+										{resumeMode === "upload" && (
+											<span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-t" />
+										)}
+									</button>
+									<button
+										type="button"
+										onClick={() => {
+											if (resumeMode !== "paste") {
+												setResumeMode("paste");
+												setUploadedFile(null);
+												setResume("");
+											}
+										}}
+										className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+											resumeMode === "paste"
+												? "text-red-400"
+												: "text-zinc-500 hover:text-zinc-300"
+										}`}
+									>
+										<FileText className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
+										Paste Text
+										{resumeMode === "paste" && (
+											<span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-t" />
+										)}
+									</button>
+								</div>
+
+								{/* Upload Tab Content */}
+								{resumeMode === "upload" && (
+									<>
+										{!uploadedFile ? (
+											<div
+												onDragEnter={handleDrag}
+												onDragLeave={handleDrag}
+												onDragOver={handleDrag}
+												onDrop={handleDrop}
+												className={`relative border-2 border-dashed rounded-xl text-center transition-all cursor-pointer min-h-[280px] flex items-center justify-center ${
+													dragActive
+														? "border-red-500 bg-red-500/10"
+														: "border-zinc-700 hover:border-zinc-600 bg-zinc-950"
+												}`}
+											>
+												<input
+													type="file"
+													accept=".pdf,application/pdf"
+													onChange={handleFileSelect}
+													className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+													disabled={uploading || loading}
+												/>
+												{uploading ? (
+													<div className="flex flex-col items-center gap-4 py-4">
+														<svg className="animate-spin h-8 w-8 text-red-500" viewBox="0 0 24 24">
+															<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+															<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+														</svg>
+														<p className="text-zinc-300 font-medium">{uploadProgress || "Uploading PDF..."}</p>
+														<div className="w-48 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+															<div className="h-full bg-red-500 rounded-full animate-pulse" style={{ width: "70%" }} />
+														</div>
+													</div>
+												) : (
+													<div className="flex flex-col items-center gap-3 py-4">
+														<div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center">
+															<Upload className="w-6 h-6 text-zinc-400" />
+														</div>
+														<div>
+															<p className="text-zinc-300 font-medium">
+																Drop your resume PDF here
+															</p>
+															<p className="text-zinc-500 text-sm mt-1">
+																or click to browse (max 5MB)
+															</p>
+														</div>
+													</div>
+												)}
 											</div>
 										) : (
-											<div className="flex flex-col items-center gap-3 py-4">
-												<div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center">
-													<Upload className="w-6 h-6 text-zinc-400" />
+											<div className="space-y-3">
+												{/* Uploaded File Badge */}
+												<div className="flex items-center justify-between bg-zinc-800 rounded-lg px-4 py-3">
+													<div className="flex items-center gap-3">
+														<FileText className="w-5 h-5 text-red-400" />
+														<div>
+															<p className="text-sm text-zinc-200 font-medium truncate max-w-[200px]">
+																{uploadedFile.name}
+															</p>
+															<p className="text-xs text-zinc-500">
+																{(uploadedFile.size / 1024).toFixed(1)} KB
+															</p>
+														</div>
+													</div>
+													<button
+														type="button"
+														onClick={clearUpload}
+														className="p-1 hover:bg-zinc-700 rounded-full transition-colors"
+														disabled={loading}
+													>
+														<X className="w-4 h-4 text-zinc-400" />
+													</button>
 												</div>
-												<div>
-													<p className="text-zinc-300 font-medium">
-														Drop your resume PDF here
-													</p>
-													<p className="text-zinc-500 text-sm mt-1">
-														or click to browse (max 5MB)
-													</p>
-												</div>
+												{/* Extracted text preview (read-only) */}
+												<Textarea
+													value={resume}
+													readOnly
+													placeholder="Extracted text from PDF..."
+													className="min-h-[230px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-none cursor-default opacity-80"
+												/>
 											</div>
 										)}
-									</div>
+									</>
 								)}
 
-								{/* Uploaded File Badge */}
-								{uploadedFile && (
-									<div className="flex items-center justify-between bg-zinc-800 rounded-lg px-4 py-3">
-										<div className="flex items-center gap-3">
-											<FileText className="w-5 h-5 text-red-400" />
-											<div>
-												<p className="text-sm text-zinc-200 font-medium truncate max-w-[200px]">
-													{uploadedFile.name}
-												</p>
-												<p className="text-xs text-zinc-500">
-													{(uploadedFile.size / 1024).toFixed(1)} KB
-												</p>
-											</div>
-										</div>
-										<button
-											type="button"
-											onClick={clearUpload}
-											className="p-1 hover:bg-zinc-700 rounded-full transition-colors"
-											disabled={loading}
-										>
-											<X className="w-4 h-4 text-zinc-400" />
-										</button>
-									</div>
-								)}
-
-								{/* Or divider */}
-								{!uploadedFile && !resume && (
-									<div className="relative">
-										<div className="absolute inset-0 flex items-center">
-											<div className="w-full border-t border-zinc-800" />
-										</div>
-										<div className="relative flex justify-center text-xs">
-											<span className="bg-zinc-900 px-2 text-zinc-500">or paste below</span>
-										</div>
-									</div>
-								)}
-
-								{/* Textarea */}
-								<Textarea
-									value={resume}
-									onChange={(e) => {
-										setResume(e.target.value);
-										if (e.target.value && uploadedFile) {
-											setUploadedFile(null);
-										}
-									}}
-									placeholder={uploadedFile ? "Extracted text from PDF..." : `Paste your entire resume here...
+								{/* Paste Tab Content */}
+								{resumeMode === "paste" && (
+									<Textarea
+										value={resume}
+										onChange={(e) => setResume(e.target.value)}
+										placeholder={`Paste your entire resume here...
 
 John Doe
 Software Engineer
@@ -333,11 +388,10 @@ EXPERIENCE
 Senior Developer at TechCorp (2020-2023)
 • Built scalable APIs serving 1M+ requests/day
 • Led team of 5 engineers...`}
-									className={`bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-none focus:border-red-500/50 focus:ring-red-500/20 ${
-										uploadedFile || resume ? "min-h-[200px]" : "min-h-[120px]"
-									}`}
-									disabled={loading}
-								/>
+										className="min-h-[280px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-none focus:border-red-500/50 focus:ring-red-500/20"
+										disabled={loading}
+									/>
+								)}
 							</div>
 
 							{/* Job Description Input */}
