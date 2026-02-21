@@ -15,6 +15,7 @@ export default function AnalyzePage() {
 	const [resume, setResume] = useState("");
 	const [jobDescription, setJobDescription] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [loadingStep, setLoadingStep] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [roastsRemaining, setRoastsRemaining] = useState<number | null>(null);
 
@@ -197,6 +198,17 @@ export default function AnalyzePage() {
 
 		setLoading(true);
 		setError(null);
+		setLoadingStep("Submitting your application...");
+
+		// Cycle through progress messages so the user knows it's working
+		const steps = [
+			{ msg: "Reading your resume...", delay: 2000 },
+			{ msg: "Analyzing the job requirements...", delay: 4000 },
+			{ msg: "Comparing qualifications...", delay: 7000 },
+			{ msg: "Writing your roast...", delay: 11000 },
+			{ msg: "Almost done, putting the finishing touches...", delay: 18000 },
+		];
+		const timers = steps.map((s) => setTimeout(() => setLoadingStep(s.msg), s.delay));
 
 		try {
 			const res = await fetch("/api/analyze", {
@@ -224,7 +236,9 @@ export default function AnalyzePage() {
 		} catch {
 			setError("Something went wrong. Please try again.");
 		} finally {
+			for (const t of timers) clearTimeout(t);
 			setLoading(false);
+			setLoadingStep("");
 		}
 	};
 
@@ -586,7 +600,7 @@ Requirements:
 										<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
 										<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
 									</svg>
-									Analyzing your application...
+									{loadingStep || "Analyzing your application..."}
 								</span>
 							) : (
 								"Roast Me 🔥"

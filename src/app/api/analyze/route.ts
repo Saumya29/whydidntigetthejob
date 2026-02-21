@@ -13,6 +13,103 @@ const openai = new OpenAI({
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+// Helpers to clamp AI values to valid schema enums
+function clampTo<T extends string>(value: unknown, allowed: T[], fallback: T): T {
+	if (typeof value === "string") {
+		// Try exact match first
+		if (allowed.includes(value as T)) return value as T;
+		// Try case-insensitive match
+		const lower = value.toLowerCase();
+		const match = allowed.find((a) => a.toLowerCase() === lower);
+		if (match) return match;
+	}
+	return fallback;
+}
+
+function sanitizeAnalysis(raw: Record<string, unknown>) {
+	const effortImpact = ["Low", "Medium", "High"] as const;
+	const competitionLevels = ["Low", "Medium", "High", "Extreme"] as const;
+	const severities = ["Critical", "Warning", "Minor"] as const;
+	const statuses = ["missing", "weak", "strong"] as const;
+
+	// Sanitize skillGapHeatmap
+	const skillGapHeatmap = Array.isArray(raw.skillGapHeatmap)
+		? raw.skillGapHeatmap.map((s: Record<string, unknown>) => ({
+				skill: String(s.skill || ""),
+				status: clampTo(s.status, [...statuses], "weak"),
+				jdMention: Boolean(s.jdMention),
+				resumeMention: Boolean(s.resumeMention),
+			}))
+		: [];
+
+	// Sanitize priorities
+	const priorities = Array.isArray(raw.priorities)
+		? raw.priorities.map((p: Record<string, unknown>) => ({
+				rank: Number(p.rank) || 1,
+				issue: String(p.issue || ""),
+				effort: clampTo(p.effort, [...effortImpact], "Medium"),
+				impact: clampTo(p.impact, [...effortImpact], "Medium"),
+				action: String(p.action || ""),
+			}))
+		: [];
+
+	// Sanitize competition
+	const rawComp = (raw.competition || {}) as Record<string, unknown>;
+	const competition = {
+		estimatedApplicants: Number(rawComp.estimatedApplicants) || 150,
+		estimatedRank: Number(rawComp.estimatedRank) || 75,
+		percentile: Number(rawComp.percentile) || 50,
+		competitionLevel: clampTo(rawComp.competitionLevel, [...competitionLevels], "Medium"),
+	};
+
+	// Sanitize atsScore
+	const rawAts = (raw.atsScore || {}) as Record<string, unknown>;
+	const atsScore = {
+		score: Number(rawAts.score) || 50,
+		issues: Array.isArray(rawAts.issues)
+			? rawAts.issues.map((i: Record<string, unknown>) => ({
+					category: String(i.category || "Keywords"),
+					issue: String(i.issue || ""),
+					severity: clampTo(i.severity, [...severities], "Warning"),
+				}))
+			: [],
+		missingKeywords: Array.isArray(rawAts.missingKeywords)
+			? rawAts.missingKeywords.map(String)
+			: [],
+		tips: Array.isArray(rawAts.tips) ? rawAts.tips.map(String) : [],
+	};
+
+	// Sanitize bulletRewrite
+	const rawBullet = raw.bulletRewrite as Record<string, unknown> | null | undefined;
+	const bulletRewrite = rawBullet
+		? {
+				before: String(rawBullet.before || ""),
+				after: String(rawBullet.after || ""),
+				why: String(rawBullet.why || ""),
+			}
+		: undefined;
+
+	return {
+		grade: String(raw.grade || "C"),
+		headline: String(raw.headline || ""),
+		rejection: String(raw.rejection || ""),
+		hiringManagerQuote: String(raw.hiringManagerQuote || ""),
+		improvements: Array.isArray(raw.improvements) ? raw.improvements.map(String) : [],
+		skillGaps: skillGapHeatmap.filter((s) => s.status !== "strong").map((s) => s.skill),
+		recruiterNotes: Array.isArray(raw.recruiterNotes)
+			? raw.recruiterNotes.map((n: Record<string, unknown>) => ({
+					section: String(n.section || ""),
+					note: String(n.note || ""),
+				}))
+			: [],
+		skillGapHeatmap,
+		priorities,
+		competition,
+		bulletRewrite,
+		atsScore,
+	};
+}
+
 export async function POST(request: NextRequest) {
 	try {
 		// Rate limiting
@@ -148,23 +245,14 @@ Return ONLY a JSON object with these fields:
 		const analysis = JSON.parse(content);
 		const resultId = nanoid(10);
 
-		// Build the result object
+		// Sanitize AI output to match Convex schema validators
+		const sanitized = sanitizeAnalysis(analysis);
+
 		const result = {
 			resultId,
 			clerkId: userId,
 			email,
-			grade: analysis.grade,
-			headline: analysis.headline,
-			rejection: analysis.rejection,
-			hiringManagerQuote: analysis.hiringManagerQuote,
-			improvements: analysis.improvements || [],
-			skillGaps: analysis.skillGapHeatmap?.filter((s: { status: string }) => s.status !== "strong").map((s: { skill: string }) => s.skill) || [],
-			recruiterNotes: analysis.recruiterNotes || [],
-			skillGapHeatmap: analysis.skillGapHeatmap || [],
-			priorities: analysis.priorities || [],
-			competition: analysis.competition || { estimatedApplicants: 150, estimatedRank: 75, percentile: 50, competitionLevel: "Medium" as const },
-			bulletRewrite: analysis.bulletRewrite || null,
-			atsScore: analysis.atsScore || { score: 50, issues: [], missingKeywords: [], tips: [] },
+			...sanitized,
 		};
 
 		// Save to Convex
@@ -180,17 +268,19 @@ Return ONLY a JSON object with these fields:
 		});
 	} catch (error) {
 		console.error("Analysis error:", error);
-		
+
 		if (error instanceof Error) {
 			if (error.message.includes("API key")) {
-				return NextResponse.json({ error: "AI API key not configured" }, { status: 500 });
+				return NextResponse.json({ error: "AI service configuration error. Please try again later." }, { status: 500 });
 			}
 			if (error.message.includes("quota") || error.message.includes("rate")) {
 				return NextResponse.json({ error: "AI rate limit reached. Try again in a minute." }, { status: 429 });
 			}
-			return NextResponse.json({ error: error.message }, { status: 500 });
+			if (error.message.includes("JSON")) {
+				return NextResponse.json({ error: "AI returned an unexpected response. Please try again." }, { status: 500 });
+			}
 		}
-		
-		return NextResponse.json({ error: "Failed to analyze. Please try again." }, { status: 500 });
+
+		return NextResponse.json({ error: "Analysis failed. Please try again." }, { status: 500 });
 	}
 }
