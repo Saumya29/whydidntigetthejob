@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
-import { useUser, SignInButton } from "@clerk/nextjs";
+import { useUser, useClerk, SignInButton } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,7 @@ import { Upload, FileText, X, Link } from "lucide-react";
 export default function AnalyzePage() {
 	const router = useRouter();
 	const { isLoaded, isSignedIn, user } = useUser();
+	const { signOut } = useClerk();
 
 	const [resume, setResume] = useState("");
 	const [jobDescription, setJobDescription] = useState("");
@@ -229,7 +230,8 @@ export default function AnalyzePage() {
 				}
 				router.push(`/results/${data.id}`);
 			} else if (res.status === 401) {
-				setError("Your session expired. Please refresh the page and sign in again.");
+				await signOut();
+				return;
 			} else if (data.needsPayment) {
 				setRoastsRemaining(0);
 				setError("No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits.");
