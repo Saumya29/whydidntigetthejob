@@ -1,30 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrCreateUser } from "@/lib/storage";
+import { ConvexHttpClient } from "convex/browser";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { api } from "../../../../../convex/_generated/api";
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: NextRequest) {
 	try {
-		const { email } = await request.json();
+		const { userId } = await auth();
+		const user = await currentUser();
 
-		if (!email) {
+		if (!userId || !user) {
 			return NextResponse.json(
-				{ error: "Email is required" },
-				{ status: 400 }
+				{ error: "Authentication required" },
+				{ status: 401 },
 			);
 		}
 
-		const user = await getOrCreateUser(email);
+		const email = user.primaryEmailAddress?.emailAddress;
+		if (!email) {
+			return NextResponse.json(
+				{ error: "Email required" },
+				{ status: 400 },
+			);
+		}
+
+		const dbUser = await convex.mutation(api.users.getOrCreate, {
+			clerkId: userId,
+			email,
+			name: user.fullName || undefined,
+		});
+
+		if (!dbUser) {
+			return NextResponse.json(
+				{ error: "Failed to get or create user" },
+				{ status: 500 },
+			);
+		}
 
 		return NextResponse.json({
-			email: user.email,
-			roastsRemaining: user.roastsRemaining,
-			totalRoasts: user.totalRoasts,
-			isPaid: user.isPaid,
+			email: dbUser.email,
+			roastsRemaining: dbUser.roastsRemaining,
+			totalRoasts: dbUser.totalRoasts,
+			plan: dbUser.plan,
 		});
 	} catch (error) {
 		console.error("User check error:", error);
 		return NextResponse.json(
 			{ error: "Failed to check user" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }

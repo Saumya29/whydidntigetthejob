@@ -12,8 +12,6 @@ interface Submission {
 	resultId: string;
 	grade: string;
 	headline: string;
-	isPaid: boolean;
-	isFreeRoast?: boolean;
 	email?: string;
 	atsScore?: number;
 	createdAt: number;
@@ -24,16 +22,13 @@ interface Analytics {
 	today: number;
 	thisWeek: number;
 	thisMonth: number;
-	paidCount: number;
-	freeCount: number;
-	revenue: number;
 	gradeDistribution: Record<string, number>;
 }
 
 interface UserStats {
 	total: number;
-	paid: number;
-	freeOnly: number;
+	totalCreditsRemaining: number;
+	totalCreditsUsed: number;
 }
 
 export default function AdminPage() {
@@ -65,7 +60,7 @@ export default function AdminPage() {
 
 	if (!isAuthed) {
 		return (
-			<main className="min-h-screen flex items-center justify-center p-4">
+			<main className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4">
 				<div className="w-full max-w-md">
 					<div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-8 space-y-6">
 						<div className="text-center space-y-2">
@@ -146,7 +141,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
 	const fetchDashboardData = async () => {
 		try {
-			const res = await fetch("/api/admin/stats");
+			const res = await fetch(`/api/admin/stats?password=${encodeURIComponent(ADMIN_PASSWORD)}`);
 			if (res.ok) {
 				const data = await res.json();
 				setAnalytics(data.analytics);
@@ -155,14 +150,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 			} else {
 				setAnalytics({
 					total: 0, today: 0, thisWeek: 0, thisMonth: 0,
-					paidCount: 0, freeCount: 0, revenue: 0,
 					gradeDistribution: { A: 0, B: 0, C: 0, D: 0, F: 0 },
 				});
 			}
 		} catch {
 			setAnalytics({
 				total: 0, today: 0, thisWeek: 0, thisMonth: 0,
-				paidCount: 0, freeCount: 0, revenue: 0,
 				gradeDistribution: { A: 0, B: 0, C: 0, D: 0, F: 0 },
 			});
 		} finally {
@@ -180,7 +173,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
 	if (loading) {
 		return (
-			<main className="min-h-screen flex items-center justify-center">
+			<main className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center">
 				<div className="flex items-center gap-3 text-zinc-400">
 					<svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
 						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -193,7 +186,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 	}
 
 	return (
-		<main className="min-h-screen p-4 md:p-8">
+		<main className="px-4 py-8 md:py-12">
 			<div className="max-w-7xl mx-auto space-y-8">
 				{/* Header */}
 				<div className="flex items-center justify-between">
@@ -213,7 +206,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 				</div>
 
 				{/* Key Metrics */}
-				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+				<div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
 					<MetricCard
 						label="Total Roasts"
 						value={analytics?.total ?? 0}
@@ -227,47 +220,24 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 						accent
 					/>
 					<MetricCard
-						label="Revenue"
-						value={`$${(analytics?.revenue ?? 0).toFixed(0)}`}
-						icon="💰"
-						className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20"
+						label="Total Users"
+						value={userStats?.total ?? 0}
+						icon="👥"
 					/>
 					<MetricCard
-						label="Conversion"
-						value={analytics?.total ? `${Math.round((analytics.paidCount / analytics.total) * 100)}%` : "0%"}
-						icon="🎯"
+						label="Credits Remaining"
+						value={userStats?.totalCreditsRemaining ?? 0}
+						icon="🎟️"
+					/>
+					<MetricCard
+						label="Credits Used"
+						value={userStats?.totalCreditsUsed ?? 0}
+						icon="✅"
 					/>
 				</div>
 
-				{/* User & Payment Stats */}
-				<div className="grid md:grid-cols-2 gap-6">
-					{/* Users */}
-					<div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 space-y-4">
-						<div className="flex items-center gap-3">
-							<div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
-								<span className="text-xl">👥</span>
-							</div>
-							<div>
-								<h3 className="font-semibold text-white">Users</h3>
-								<p className="text-zinc-500 text-sm">Email signups</p>
-							</div>
-						</div>
-						<div className="grid grid-cols-3 gap-4">
-							<div className="text-center p-3 bg-zinc-800/50 rounded-xl">
-								<p className="text-2xl font-bold text-white">{userStats?.total ?? 0}</p>
-								<p className="text-zinc-500 text-xs">Total</p>
-							</div>
-							<div className="text-center p-3 bg-zinc-800/50 rounded-xl">
-								<p className="text-2xl font-bold text-emerald-400">{userStats?.paid ?? 0}</p>
-								<p className="text-zinc-500 text-xs">Paid</p>
-							</div>
-							<div className="text-center p-3 bg-zinc-800/50 rounded-xl">
-								<p className="text-2xl font-bold text-zinc-400">{userStats?.freeOnly ?? 0}</p>
-								<p className="text-zinc-500 text-xs">Free</p>
-							</div>
-						</div>
-					</div>
-
+				{/* Stats */}
+				<div className="grid md:grid-cols-1 gap-6">
 					{/* Grade Distribution */}
 					<div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 space-y-4">
 						<div className="flex items-center gap-3">
@@ -346,15 +316,6 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 													ATS {sub.atsScore}
 												</Badge>
 											)}
-											{sub.isFreeRoast ? (
-												<Badge className="bg-zinc-700 text-zinc-300 text-xs">
-													Free
-												</Badge>
-											) : (
-												<Badge className="bg-emerald-500/20 text-emerald-400 text-xs">
-													Paid
-												</Badge>
-											)}
 										</div>
 									</div>
 								))}
@@ -418,8 +379,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 				</div>
 
 				{/* Quick Actions */}
-				<div className="grid md:grid-cols-3 gap-4">
-					<button 
+				<div className="grid md:grid-cols-2 gap-4">
+					<button
 						onClick={() => window.open("/", "_blank")}
 						className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 text-left hover:bg-zinc-800/50 transition-colors group"
 					>
@@ -427,15 +388,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 						<p className="font-medium text-white mt-2">View Landing</p>
 						<p className="text-zinc-500 text-sm">Open homepage</p>
 					</button>
-					<button 
-						onClick={() => window.open("/pricing", "_blank")}
-						className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 text-left hover:bg-zinc-800/50 transition-colors group"
-					>
-						<span className="text-2xl">💳</span>
-						<p className="font-medium text-white mt-2">View Pricing</p>
-						<p className="text-zinc-500 text-sm">Check pricing page</p>
-					</button>
-					<button 
+					<button
 						onClick={fetchDashboardData}
 						className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 text-left hover:bg-zinc-800/50 transition-colors group"
 					>

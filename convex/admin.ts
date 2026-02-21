@@ -55,11 +55,6 @@ export const getAnalytics = query({
 			}
 		}
 
-		// Payment stats
-		const paidResults = allResults.filter(r => r.isPaid);
-		const payments = await ctx.db.query("payments").collect();
-		const revenue = payments.filter(p => p.used && p.amount).reduce((sum, p) => sum + (p.amount || 0), 0);
-
 		// Calculate average ATS score (atsScore is now an object with .score)
 		const resultsWithAts = allResults.filter(r => r.atsScore?.score !== undefined);
 		const avgAtsScore = resultsWithAts.length > 0
@@ -71,9 +66,6 @@ export const getAnalytics = query({
 			today: today.length,
 			thisWeek: thisWeek.length,
 			thisMonth: thisMonth.length,
-			paidCount: paidResults.length,
-			freeCount: allResults.length - paidResults.length,
-			revenue: revenue / 100, // Convert cents to dollars
 			gradeDistribution,
 			averageAtsScore: avgAtsScore,
 		};
@@ -97,10 +89,23 @@ export const getRecentSubmissions = query({
 			resultId: r.resultId,
 			grade: r.grade,
 			headline: r.headline,
-			isPaid: r.isPaid || false,
 			atsScore: r.atsScore?.score || null,
 			createdAt: r.createdAt,
 		}));
+	},
+});
+
+// Get user stats
+export const getUserStats = query({
+	handler: async (ctx) => {
+		const allUsers = await ctx.db.query("users").collect();
+		const totalCreditsRemaining = allUsers.reduce((sum, u) => sum + u.roastsRemaining, 0);
+		const totalCreditsUsed = allUsers.reduce((sum, u) => sum + u.totalRoasts, 0);
+		return {
+			total: allUsers.length,
+			totalCreditsRemaining,
+			totalCreditsUsed,
+		};
 	},
 });
 

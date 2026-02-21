@@ -17,11 +17,16 @@ export function Header() {
 				</Link>
 
 				{/* Navigation */}
-				<nav className="flex items-center gap-4">
+				<nav className="flex items-center gap-3">
 					{!isLoaded ? (
 						<div className="w-20 h-8 bg-zinc-800 animate-pulse rounded" />
 					) : isSignedIn ? (
 						<>
+							<Link href="/analyze">
+								<Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+									New Roast
+								</Button>
+							</Link>
 							<Link href="/dashboard">
 								<Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white">
 									Dashboard
@@ -45,7 +50,7 @@ export function Header() {
 							</SignInButton>
 							<SignUpButton mode="modal">
 								<Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
-									Sign Up
+									Get Started
 								</Button>
 							</SignUpButton>
 						</>

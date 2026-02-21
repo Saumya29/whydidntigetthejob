@@ -2,7 +2,7 @@ import { SignUp } from "@clerk/nextjs";
 
 export default function SignUpPage() {
 	return (
-		<main className="min-h-screen flex items-center justify-center p-4">
+		<main className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4">
 			<SignUp
 				appearance={{
 					elements: {

@@ -16,13 +16,6 @@ export default defineSchema({
 		.index("by_clerkId", ["clerkId"])
 		.index("by_email", ["email"]),
 
-	// Email list for free tier tracking + marketing (guest users)
-	freeRoasts: defineTable({
-		email: v.string(),
-		usedAt: v.number(),
-		resultId: v.optional(v.string()),
-	}).index("by_email", ["email"]),
-
 	// Full analysis results
 	results: defineTable({
 		resultId: v.string(),
@@ -88,28 +81,14 @@ export default defineSchema({
 		})),
 		
 		// Metadata
-		isPaid: v.optional(v.boolean()),
-		isFreeRoast: v.optional(v.boolean()),
-		paymentSessionId: v.optional(v.string()),
 		createdAt: v.number(),
 	}).index("by_resultId", ["resultId"])
 	  .index("by_clerkId", ["clerkId"])
 	  .index("by_createdAt", ["createdAt"]),
 
-	payments: defineTable({
-		sessionId: v.string(),
-		clerkId: v.optional(v.string()),
-		used: v.boolean(),
-		amount: v.optional(v.number()),
-		createdAt: v.number(),
-	}).index("by_sessionId", ["sessionId"])
-	  .index("by_createdAt", ["createdAt"]),
-
 	analytics: defineTable({
 		date: v.string(), // YYYY-MM-DD
 		submissions: v.number(),
-		paidSubmissions: v.number(),
-		revenue: v.number(),
 		gradeDistribution: v.object({
 			A: v.number(),
 			B: v.number(),

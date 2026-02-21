@@ -306,7 +306,7 @@ export default function ResultsPage() {
 	// Loading state (result is undefined while loading)
 	if (result === undefined) {
 		return (
-			<main className="min-h-screen flex items-center justify-center">
+			<main className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center">
 				<div className="flex items-center gap-3 text-zinc-400">
 					<svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
 						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -320,7 +320,7 @@ export default function ResultsPage() {
 
 	if (!result) {
 		return (
-			<main className="min-h-screen flex items-center justify-center p-4">
+			<main className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4">
 				<div className="text-center space-y-4">
 					<h1 className="text-2xl font-bold">Results not found</h1>
 					<p className="text-zinc-400">This roast may have expired or doesn&apos;t exist.</p>
@@ -335,7 +335,7 @@ export default function ResultsPage() {
 	const gradeStyle = getGradeStyle(result.grade);
 
 	return (
-		<main className="min-h-screen p-4 py-8 md:py-12">
+		<main className="px-4 py-8 md:py-12">
 			<div className="max-w-3xl mx-auto space-y-6">
 				{/* Header */}
 				<div className="text-center space-y-2">

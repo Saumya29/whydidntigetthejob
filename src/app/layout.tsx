@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { ConvexClientProvider } from "@/components/convex-provider";
+import { Header } from "@/components/header";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -144,7 +145,10 @@ export default function RootLayout({
 			<html lang="en">
 				<body className={`${inter.className} bg-zinc-950 text-zinc-100 min-h-screen antialiased`}>
 					<ConvexClientProvider>
-						{children}
+						<Header />
+						<div className="pt-14">
+							{children}
+						</div>
 					</ConvexClientProvider>
 				</body>
 			</html>

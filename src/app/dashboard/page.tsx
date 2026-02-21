@@ -17,21 +17,14 @@ export default async function DashboardPage() {
 	const roastHistory: { id: string; grade: string; headline: string; createdAt: string }[] = []; // Placeholder
 
 	return (
-		<main className="min-h-screen p-4 md:p-8">
+		<main className="px-4 py-8 md:py-12">
 			<div className="max-w-4xl mx-auto space-y-8">
 				{/* Header */}
-				<div className="flex items-center justify-between">
-					<div className="space-y-1">
-						<h1 className="text-3xl font-bold">
-							Welcome back, <span className="text-red-500">{user?.firstName || "friend"}</span>
-						</h1>
-						<p className="text-zinc-400">Your roast dashboard</p>
-					</div>
-					<Link href="/">
-						<Button variant="outline" className="border-zinc-700">
-							← Back to Home
-						</Button>
-					</Link>
+				<div className="space-y-1">
+					<h1 className="text-3xl font-bold">
+						Welcome back, <span className="text-red-500">{user?.firstName || "friend"}</span>
+					</h1>
+					<p className="text-zinc-400">Your roast dashboard</p>
 				</div>
 
 				{/* Stats */}
@@ -43,9 +36,7 @@ export default async function DashboardPage() {
 						</div>
 						<p className="text-4xl font-bold text-white">{roastsRemaining}</p>
 						{roastsRemaining === 0 && (
-							<Link href="/pricing" className="text-red-400 text-sm hover:underline mt-2 inline-block">
-								Get more roasts →
-							</Link>
+							<p className="text-red-400 text-sm mt-2">No credits remaining</p>
 						)}
 					</div>
 
@@ -75,12 +66,7 @@ export default async function DashboardPage() {
 								🔥 New Roast
 							</Button>
 						</Link>
-						<Link href="/pricing">
-							<Button variant="outline" className="border-zinc-700">
-								💳 Get More Roasts
-							</Button>
-						</Link>
-					</div>
+						</div>
 				</div>
 
 				{/* Roast History */}

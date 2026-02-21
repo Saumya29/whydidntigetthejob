@@ -9,7 +9,6 @@
  */
 
 import type * as admin from "../admin.js";
-import type * as freeTier from "../freeTier.js";
 import type * as results from "../results.js";
 import type * as users from "../users.js";
 
@@ -21,7 +20,6 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
-  freeTier: typeof freeTier;
   results: typeof results;
   users: typeof users;
 }>;

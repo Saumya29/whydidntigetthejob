@@ -30,55 +30,59 @@ const exampleRoasts = [
 
 export default function Home() {
 	return (
-		<main className="min-h-screen flex flex-col items-center justify-center p-4">
-			<div className="max-w-2xl mx-auto text-center space-y-8">
-				{/* Hero */}
-				<div className="space-y-4">
-					<Badge variant="outline" className="text-red-400 border-red-400/50">
-						The truth hurts. Apply anyway.
-					</Badge>
+		<main className="min-h-[calc(100vh-3.5rem)] flex flex-col">
+			{/* Hero Section */}
+			<section className="flex-1 flex flex-col items-center justify-center px-4 py-16 md:py-24">
+				<div className="max-w-2xl mx-auto text-center space-y-8">
+					<div className="space-y-4">
+						<Badge variant="outline" className="text-red-400 border-red-400/50">
+							The truth hurts. Apply anyway.
+						</Badge>
 
-					<h1 className="text-5xl md:text-6xl font-bold tracking-tight">
-						Why Didn&apos;t I Get <span className="text-red-500">The Job?</span>
-					</h1>
+						<h1 className="text-5xl md:text-6xl font-bold tracking-tight">
+							Why Didn&apos;t I Get <span className="text-red-500">The Job?</span>
+						</h1>
 
-					<p className="text-xl text-zinc-400 max-w-lg mx-auto">
-						The rejection letter you deserved but never got.
-					</p>
-				</div>
+						<p className="text-xl text-zinc-400 max-w-lg mx-auto">
+							The rejection letter you deserved but never got.
+						</p>
+					</div>
 
-				{/* Value prop */}
-				<div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 space-y-4">
-					<p className="text-zinc-300">
-						Paste your resume and the job description. Our AI will tell you
-						<span className="text-red-400 font-medium"> exactly </span>
-						why you got ghosted — with brutal honesty and actionable feedback.
-					</p>
+					{/* Value prop */}
+					<div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 space-y-4">
+						<p className="text-zinc-300">
+							Paste your resume and the job description. Our AI will tell you
+							<span className="text-red-400 font-medium"> exactly </span>
+							why you got ghosted — with brutal honesty and actionable feedback.
+						</p>
 
-					<div className="flex flex-wrap justify-center gap-3 text-sm">
-						<span className="px-3 py-1 bg-zinc-800 rounded-full">📄 Resume analysis</span>
-						<span className="px-3 py-1 bg-zinc-800 rounded-full">🎯 Skill gap breakdown</span>
-						<span className="px-3 py-1 bg-zinc-800 rounded-full">🔥 Roast grade A-F</span>
-						<span className="px-3 py-1 bg-zinc-800 rounded-full">📸 Shareable results</span>
+						<div className="flex flex-wrap justify-center gap-3 text-sm">
+							<span className="px-3 py-1 bg-zinc-800 rounded-full">📄 Resume analysis</span>
+							<span className="px-3 py-1 bg-zinc-800 rounded-full">🎯 Skill gap breakdown</span>
+							<span className="px-3 py-1 bg-zinc-800 rounded-full">🔥 Roast grade A-F</span>
+							<span className="px-3 py-1 bg-zinc-800 rounded-full">📸 Shareable results</span>
+						</div>
+					</div>
+
+					{/* CTA */}
+					<div className="space-y-4">
+						<Link href="/analyze">
+							<Button
+								size="lg"
+								className="bg-red-600 hover:bg-red-700 text-white px-8 h-14 text-lg"
+							>
+								Get Roasted 🔥
+							</Button>
+						</Link>
+						<p className="text-sm text-zinc-500">3 free credits on signup • No credit card</p>
 					</div>
 				</div>
+			</section>
 
-				{/* Simple CTA */}
-				<div className="space-y-4">
-					<Link href="/sign-up">
-						<Button
-							size="lg"
-							className="bg-red-600 hover:bg-red-700 text-white px-8 h-14 text-lg"
-						>
-							Get Roasted 🔥
-						</Button>
-					</Link>
-					<p className="text-sm text-zinc-500">First 3 roasts on us • No credit card</p>
-				</div>
-
-				{/* Example Roasts */}
-				<div className="pt-12 space-y-6">
-					<h2 className="text-2xl font-bold text-zinc-300">Recent Roasts</h2>
+			{/* Example Roasts Section */}
+			<section className="px-4 pb-16">
+				<div className="max-w-2xl mx-auto space-y-6">
+					<h2 className="text-2xl font-bold text-zinc-300 text-center">Recent Roasts</h2>
 					<div className="grid gap-4">
 						{exampleRoasts.map((roast, i) => (
 							<div
@@ -137,28 +141,26 @@ export default function Home() {
 						))}
 					</div>
 				</div>
+			</section>
 
-				{/* Social proof teaser */}
-				<div className="pt-8 border-t border-zinc-800">
+			{/* Footer */}
+			<footer className="border-t border-zinc-800 px-4 py-8">
+				<div className="max-w-2xl mx-auto text-center space-y-6">
 					<p className="text-zinc-500 text-sm">
 						&ldquo;I finally understand why 47 companies ghosted me.&rdquo;
 						<br />
 						<span className="text-zinc-600">— A humbled software engineer</span>
 					</p>
-				</div>
-
-				{/* Bottom CTA */}
-				<div className="pb-8">
-					<Link href="/sign-up">
+					<Link href="/analyze">
 						<Button
 							size="lg"
 							className="bg-red-600 hover:bg-red-700 text-white"
 						>
-							Start Your 3 Free Roasts →
+							Get Your 3 Free Credits →
 						</Button>
 					</Link>
 				</div>
-			</div>
+			</footer>
 		</main>
 	);
 }

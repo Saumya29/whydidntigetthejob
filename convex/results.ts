@@ -51,8 +51,6 @@ export const save = mutation({
 			missingKeywords: v.array(v.string()),
 			tips: v.array(v.string()),
 		})),
-		isPaid: v.optional(v.boolean()),
-		isFreeRoast: v.optional(v.boolean()),
 	},
 	handler: async (ctx, args) => {
 		const id = await ctx.db.insert("results", {

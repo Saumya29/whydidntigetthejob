@@ -1,11 +1,14 @@
 import { ImageResponse } from "@vercel/og";
-import { getResult } from "@/lib/storage";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../../../convex/_generated/api";
 
 export const runtime = "edge";
 
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
-	const result = await getResult(id);
+	const result = await convex.query(api.results.getById, { resultId: id });
 
 	if (!result) {
 		return new Response("Result not found", { status: 404 });

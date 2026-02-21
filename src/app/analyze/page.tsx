@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
-import { useUser, SignInButton, SignOutButton } from "@clerk/nextjs";
+import { useState, useCallback, useEffect } from "react";
+import { useUser, SignInButton } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +26,20 @@ export default function AnalyzePage() {
 
 	// Tab state for resume input mode
 	const [resumeMode, setResumeMode] = useState<"upload" | "paste">("upload");
+
+	// Fetch credits on load
+	useEffect(() => {
+		if (isSignedIn) {
+			fetch("/api/user/check", { method: "POST" })
+				.then((res) => res.json())
+				.then((data) => {
+					if (data.roastsRemaining !== undefined) {
+						setRoastsRemaining(data.roastsRemaining);
+					}
+				})
+				.catch(() => {});
+		}
+	}, [isSignedIn]);
 
 	// Handle file upload
 	const processFile = useCallback(async (file: File) => {
@@ -116,7 +129,7 @@ export default function AnalyzePage() {
 	// Show loading while Clerk is initializing
 	if (!isLoaded) {
 		return (
-			<div className="min-h-screen flex items-center justify-center">
+			<div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center">
 				<div className="flex items-center gap-3 text-zinc-400">
 					<svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
 						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -131,10 +144,10 @@ export default function AnalyzePage() {
 	// Show sign-in prompt if not authenticated
 	if (!isSignedIn) {
 		return (
-			<main className="min-h-screen flex flex-col items-center justify-center p-4">
+			<main className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center p-4">
 				<div className="text-center space-y-6">
 					<h1 className="text-3xl font-bold">Sign in to get roasted 🔥</h1>
-					<p className="text-zinc-400">Create a free account to get 3 free resume roasts</p>
+					<p className="text-zinc-400">Create a free account to get 3 free credits</p>
 					<SignInButton mode="modal">
 						<Button size="lg" className="bg-red-600 hover:bg-red-700">
 							Sign In to Continue
@@ -175,7 +188,7 @@ export default function AnalyzePage() {
 				router.push(`/results/${data.id}`);
 			} else if (data.needsPayment) {
 				setRoastsRemaining(0);
-				router.push("/pricing");
+				setError("No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits.");
 			} else {
 				setError(data.error || "Analysis failed. Please try again.");
 			}
@@ -187,13 +200,8 @@ export default function AnalyzePage() {
 	};
 
 	return (
-		<main className="min-h-screen flex flex-col items-center justify-center p-4 py-12">
+		<main className="px-4 py-8 md:py-12">
 			<div className="w-full max-w-4xl mx-auto space-y-8">
-				{/* Back link */}
-				<Link href="/" className="text-zinc-500 hover:text-zinc-300 text-sm inline-block">
-					← Back to home
-				</Link>
-
 				{/* Header */}
 				<div className="text-center space-y-4">
 					<Badge variant="outline" className="text-red-400 border-red-400/50">
@@ -205,16 +213,6 @@ export default function AnalyzePage() {
 					<p className="text-xl text-zinc-400 max-w-lg mx-auto">
 						Upload your resume PDF or paste it below
 					</p>
-					{user?.primaryEmailAddress && (
-						<div className="flex items-center justify-center gap-3 text-sm text-zinc-500">
-							<span>Signed in as {user.primaryEmailAddress.emailAddress}</span>
-							<SignOutButton>
-								<button type="button" className="text-red-400 hover:text-red-300 underline underline-offset-2">
-									Logout
-								</button>
-							</SignOutButton>
-						</div>
-					)}
 					{roastsRemaining !== null && (
 						<div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
 							roastsRemaining > 0
@@ -223,7 +221,7 @@ export default function AnalyzePage() {
 						}`}>
 							<span className="text-lg">🔥</span>
 							<span className={roastsRemaining > 0 ? "text-zinc-300" : "text-red-400"}>
-								<span className="font-bold text-white">{roastsRemaining}</span> roast{roastsRemaining !== 1 ? "s" : ""} remaining
+								<span className="font-bold text-white">{roastsRemaining}</span> credit{roastsRemaining !== 1 ? "s" : ""} remaining
 							</span>
 						</div>
 					)}

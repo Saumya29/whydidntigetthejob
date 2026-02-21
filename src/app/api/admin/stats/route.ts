@@ -1,25 +1,34 @@
-import { NextResponse } from "next/server";
-import { getAllResults, getAnalytics, getUserStats } from "@/lib/storage";
+import { NextRequest, NextResponse } from "next/server";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../../../convex/_generated/api";
 
-export async function GET() {
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+export async function GET(request: NextRequest) {
 	try {
-		const analytics = await getAnalytics();
-		const userStats = await getUserStats();
-		const submissions = await getAllResults();
+		// Check admin password
+		const password = request.nextUrl.searchParams.get("password");
+		if (password !== process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
+			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
+
+		const [analytics, submissions, userStats] = await Promise.all([
+			convex.query(api.admin.getAnalytics),
+			convex.query(api.admin.getSubmissions, { limit: 50 }),
+			convex.query(api.admin.getUserStats),
+		]);
 
 		return NextResponse.json({
 			analytics,
 			userStats,
 			submissions: submissions.map((r) => ({
-				id: r.id,
-				resultId: r.id,
+				id: r._id,
+				resultId: r.resultId,
 				grade: r.grade,
 				headline: r.headline,
-				isPaid: !r.isFreeRoast,
-				isFreeRoast: r.isFreeRoast,
 				email: r.email,
 				atsScore: r.atsScore?.score,
-				createdAt: r.createdAt instanceof Date ? r.createdAt.getTime() : r.createdAt,
+				createdAt: r.createdAt,
 			})),
 		});
 	} catch (error) {
