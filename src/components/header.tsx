@@ -44,7 +44,7 @@ export function Header() {
 					) : (
 						<>
 							<SignInButton mode="modal">
-								<Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white">
+								<Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white hover:bg-zinc-800">
 									Sign In
 								</Button>
 							</SignInButton>
