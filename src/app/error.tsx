@@ -31,7 +31,7 @@ export default function Error({
 					</p>
 				)}
 				<div className="flex gap-3 justify-center">
-					<Button onClick={reset} variant="outline">
+					<Button onClick={reset} variant="outline" className="border-zinc-700 hover:bg-zinc-800">
 						Try Again
 					</Button>
 					<Link href="/">
