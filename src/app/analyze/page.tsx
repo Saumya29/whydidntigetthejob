@@ -6,7 +6,7 @@ import { useUser, SignInButton } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, FileText, X } from "lucide-react";
+import { Upload, FileText, X, Link } from "lucide-react";
 
 export default function AnalyzePage() {
 	const router = useRouter();
@@ -26,6 +26,11 @@ export default function AnalyzePage() {
 
 	// Tab state for resume input mode
 	const [resumeMode, setResumeMode] = useState<"upload" | "paste">("upload");
+
+	// Tab state for JD input mode
+	const [jdMode, setJdMode] = useState<"paste" | "url">("paste");
+	const [jdUrl, setJdUrl] = useState("");
+	const [fetchingJd, setFetchingJd] = useState(false);
 
 	// Fetch credits on load
 	useEffect(() => {
@@ -124,6 +129,30 @@ export default function AnalyzePage() {
 	const clearUpload = () => {
 		setUploadedFile(null);
 		setResume("");
+	};
+
+	// Fetch JD from URL
+	const fetchJobDescription = async () => {
+		setFetchingJd(true);
+		setError(null);
+		setJobDescription("");
+		try {
+			const res = await fetch("/api/fetch-jd", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ url: jdUrl.trim() }),
+			});
+			const data = await res.json();
+			if (data.error) {
+				setError(data.error);
+			} else {
+				setJobDescription(data.text);
+			}
+		} catch {
+			setError("Couldn't fetch that page. Try pasting the job description instead.");
+		} finally {
+			setFetchingJd(false);
+		}
 	};
 
 	// Show loading while Clerk is initializing
@@ -402,10 +431,58 @@ Senior Developer at TechCorp (2020-2023)
 										{jobDescription.length > 0 ? `${jobDescription.length} chars` : "Required"}
 									</span>
 								</div>
-								<Textarea
-									value={jobDescription}
-									onChange={(e) => setJobDescription(e.target.value)}
-									placeholder={`Paste the full job posting here...
+
+								{/* JD Tabs */}
+								<div className="flex border-b border-zinc-800">
+									<button
+										type="button"
+										onClick={() => {
+											if (jdMode !== "paste") {
+												setJdMode("paste");
+												setJobDescription("");
+												setJdUrl("");
+											}
+										}}
+										className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+											jdMode === "paste"
+												? "text-red-400"
+												: "text-zinc-500 hover:text-zinc-300"
+										}`}
+									>
+										<FileText className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
+										Paste Text
+										{jdMode === "paste" && (
+											<span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-t" />
+										)}
+									</button>
+									<button
+										type="button"
+										onClick={() => {
+											if (jdMode !== "url") {
+												setJdMode("url");
+												setJobDescription("");
+											}
+										}}
+										className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+											jdMode === "url"
+												? "text-red-400"
+												: "text-zinc-500 hover:text-zinc-300"
+										}`}
+									>
+										<Link className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
+										From URL
+										{jdMode === "url" && (
+											<span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-t" />
+										)}
+									</button>
+								</div>
+
+								{/* Paste Tab Content */}
+								{jdMode === "paste" && (
+									<Textarea
+										value={jobDescription}
+										onChange={(e) => setJobDescription(e.target.value)}
+										placeholder={`Paste the full job posting here...
 
 Senior Software Engineer
 TechCorp Inc.
@@ -415,9 +492,77 @@ We're looking for an experienced engineer to join our platform team...
 Requirements:
 • 7+ years of backend experience
 • Expert in distributed systems...`}
-									className="min-h-[280px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-none focus:border-red-500/50 focus:ring-red-500/20"
-									disabled={loading}
-								/>
+										className="min-h-[280px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-none focus:border-red-500/50 focus:ring-red-500/20"
+										disabled={loading}
+									/>
+								)}
+
+								{/* URL Tab Content */}
+								{jdMode === "url" && (
+									<div className="space-y-3">
+										<div className="flex gap-2">
+											<input
+												type="url"
+												value={jdUrl}
+												onChange={(e) => setJdUrl(e.target.value)}
+												placeholder="https://linkedin.com/jobs/view/..."
+												className="flex-1 h-10 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20 focus:outline-none"
+												disabled={fetchingJd || loading}
+												onKeyDown={(e) => {
+													if (e.key === "Enter") {
+														e.preventDefault();
+														if (jdUrl.trim() && !fetchingJd && !loading) {
+															fetchJobDescription();
+														}
+													}
+												}}
+											/>
+											<Button
+												type="button"
+												disabled={!jdUrl.trim() || fetchingJd || loading}
+												onClick={fetchJobDescription}
+												className="bg-red-600 hover:bg-red-700 text-white px-4 shrink-0"
+											>
+												{fetchingJd ? (
+													<svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+														<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+														<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+													</svg>
+												) : (
+													"Fetch"
+												)}
+											</Button>
+										</div>
+										{jobDescription && (
+											<Textarea
+												value={jobDescription}
+												readOnly
+												placeholder="Fetched job description..."
+												className="min-h-[230px] bg-zinc-950 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 text-sm leading-relaxed resize-none cursor-default opacity-80"
+											/>
+										)}
+										{!jobDescription && !fetchingJd && (
+											<div className="min-h-[230px] flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-xl bg-zinc-950">
+												<div className="text-center text-zinc-500 text-sm">
+													<Link className="w-8 h-8 mx-auto mb-2 opacity-50" />
+													<p>Paste a job posting URL above</p>
+													<p className="text-xs mt-1">LinkedIn, Indeed, Greenhouse, etc.</p>
+												</div>
+											</div>
+										)}
+										{fetchingJd && (
+											<div className="min-h-[230px] flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-xl bg-zinc-950">
+												<div className="flex flex-col items-center gap-3">
+													<svg className="animate-spin h-8 w-8 text-red-500" viewBox="0 0 24 24">
+														<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+														<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+													</svg>
+													<p className="text-zinc-400 text-sm">Fetching job description...</p>
+												</div>
+											</div>
+										)}
+									</div>
+								)}
 							</div>
 						</div>
 
@@ -453,7 +598,7 @@ Requirements:
 					<div className="flex flex-wrap justify-center gap-4 text-sm text-zinc-500">
 						<span>💡 Tip: PDF upload extracts text automatically</span>
 						<span>•</span>
-						<span>📋 Copy the entire job posting, not just requirements</span>
+						<span>📋 Paste a job posting URL or copy the full text</span>
 					</div>
 				</form>
 			</div>
