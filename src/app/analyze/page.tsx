@@ -214,6 +214,7 @@ export default function AnalyzePage() {
 			const res = await fetch("/api/analyze", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
+				credentials: "include",
 				body: JSON.stringify({
 					resume,
 					jobDescription,
@@ -227,6 +228,8 @@ export default function AnalyzePage() {
 					setRoastsRemaining(data.remaining);
 				}
 				router.push(`/results/${data.id}`);
+			} else if (res.status === 401) {
+				setError("Your session expired. Please refresh the page and sign in again.");
 			} else if (data.needsPayment) {
 				setRoastsRemaining(0);
 				setError("No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits.");

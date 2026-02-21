@@ -152,21 +152,25 @@ export async function POST(request: NextRequest) {
 
 		// Get authenticated user from Clerk
 		const { userId } = await auth();
-		const user = await currentUser();
-		
-		if (!userId || !user) {
+
+		if (!userId) {
 			return NextResponse.json(
-				{ error: "Authentication required" },
+				{ error: "Authentication required. Please sign in and try again." },
 				{ status: 401 },
 			);
 		}
 
-		const email = user.primaryEmailAddress?.emailAddress;
-		if (!email) {
-			return NextResponse.json(
-				{ error: "Email required" },
-				{ status: 400 },
-			);
+		// Fetch full user profile — non-blocking fallback if it fails
+		let email = `${userId}@user`;
+		let fullName: string | undefined;
+		try {
+			const user = await currentUser();
+			if (user?.primaryEmailAddress?.emailAddress) {
+				email = user.primaryEmailAddress.emailAddress;
+			}
+			fullName = user?.fullName || undefined;
+		} catch (e) {
+			console.warn("Could not fetch Clerk user profile, using fallback:", e);
 		}
 
 		const { resume, jobDescription } = await request.json();
@@ -181,8 +185,8 @@ export async function POST(request: NextRequest) {
 		// Get or create user in Convex and check roasts remaining
 		const dbUser = await convex.mutation(api.users.getOrCreate, {
 			clerkId: userId,
-			email: email,
-			name: user.fullName || undefined,
+			email,
+			name: fullName,
 		});
 
 		if (!dbUser || dbUser.roastsRemaining <= 0) {
