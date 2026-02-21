@@ -240,13 +240,28 @@ Return ONLY a JSON object with these fields:
 			throw new Error("No response from AI");
 		}
 
-		// Strip markdown code fences if present
+		// Strip markdown code fences and any surrounding text
 		content = content.trim();
 		if (content.startsWith("```")) {
 			content = content.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
 		}
+		// Extract JSON object even if wrapped in extra text
+		const jsonMatch = content.match(/\{[\s\S]*\}/);
+		if (!jsonMatch) {
+			console.error("No JSON object found in AI response:", content.slice(0, 500));
+			throw new Error("JSON");
+		}
 
-		const analysis = JSON.parse(content);
+		let analysis: Record<string, unknown>;
+		try {
+			analysis = JSON.parse(jsonMatch[0]);
+		} catch {
+			// Try fixing common JSON issues: trailing commas, single quotes
+			const cleaned = jsonMatch[0]
+				.replace(/,\s*([}\]])/g, "$1")
+				.replace(/'/g, '"');
+			analysis = JSON.parse(cleaned);
+		}
 		const resultId = nanoid(10);
 
 		// Sanitize AI output to match Convex schema validators
