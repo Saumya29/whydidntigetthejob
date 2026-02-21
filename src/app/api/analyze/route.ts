@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const prompt = `Analyze this job application as a brutally honest recruiter. Be savage but helpful, entertaining AND useful.
+		const prompt = `You are a senior technical recruiter with 15+ years of experience who has reviewed 50,000+ resumes and knows exactly how ATS systems, hiring managers, and interview panels actually evaluate candidates. Analyze this job application. Be brutally honest, savage, and entertaining — but every single point must be specific, actionable, and backed by what you see in the resume vs. what the JD demands.
 
 RESUME:
 ${resume}
@@ -204,19 +204,41 @@ ${resume}
 JOB DESCRIPTION:
 ${jobDescription}
 
+ANALYSIS INSTRUCTIONS:
+
+1. KEYWORD MATCHING: Extract every hard skill, technology, tool, certification, and domain keyword from the JD. For each one, check if the resume mentions it exactly, uses a synonym, or omits it entirely. ATS systems do literal string matching — synonyms often don't count.
+
+2. FORMATTING & ATS COMPLIANCE: Evaluate whether the resume would survive an ATS parse. Check for: multi-column layouts, tables, headers/footers (ATS skips these), graphics/icons, unusual section headings, missing standard sections (Summary, Experience, Education, Skills), inconsistent date formats, and whether contact info is in the main body (not a header).
+
+3. EXPERIENCE RELEVANCE: For each role listed, assess how directly it maps to the JD requirements. Flag experience gaps (e.g., JD asks for 5+ years of X but resume shows 2 years). Note if bullet points show impact with metrics vs. just listing duties.
+
+4. BULLET QUALITY: Identify the weakest bullet points — ones that describe responsibilities instead of achievements, lack metrics, or use passive language. When rewriting, use the XYZ formula: "Accomplished [X] as measured by [Y], by doing [Z]."
+
+5. COMPETITION CONTEXT: Base your applicant estimates on the role's seniority, company type, and market conditions. A FAANG senior role gets 500+ applicants; a Series A startup mid-level role gets 50-150.
+
 Return ONLY a JSON object with these fields:
 {
-  "grade": "A+ to F letter grade",
+  "grade": "A+ to F letter grade based on overall fit",
   "headline": "One-line brutal summary, funny but true, max 100 chars",
-  "rejection": "2-3 paragraphs on why they didn't get the job. Specific and constructive.",
-  "recruiterNotes": [{"section":"Experience","note":"..."},{"section":"Skills","note":"..."},{"section":"Education","note":"..."},{"section":"Overall","note":"..."}],
-  "skillGapHeatmap": [{"skill":"skill name","status":"missing|weak|strong","jdMention":true,"resumeMention":false}] (6-10 key requirements),
-  "priorities": [{"rank":1,"issue":"...","effort":"Low|Medium|High","impact":"Low|Medium|High","action":"..."}] (top 3),
-  "competition": {"estimatedApplicants":number,"estimatedRank":number,"percentile":number,"competitionLevel":"Low|Medium|High|Extreme"},
-  "bulletRewrite": {"before":"their weakest bullet","after":"rewritten version","why":"what's better"},
-  "atsScore": {"score":number,"issues":[{"category":"Keywords|Formatting|Sections|Length|Contact Info","severity":"Critical|Warning|Minor","issue":"..."}],"missingKeywords":["..."],"tips":["3 tips"]},
-  "hiringManagerQuote": "What the hiring manager probably said (funny)",
-  "improvements": ["4-5 specific actionable tips"]
+  "rejection": "2-3 paragraphs explaining exactly why this candidate would be rejected. Reference specific resume content vs. specific JD requirements. Name the gaps by quoting from both documents.",
+  "recruiterNotes": [
+    {"section": "Experience", "note": "Specific assessment of experience relevance, years, and seniority match. Quote the JD requirement and what the resume actually shows."},
+    {"section": "Skills", "note": "Which required skills are demonstrated with evidence vs. just listed vs. completely missing. Call out buzzword-stuffing if present."},
+    {"section": "Education", "note": "Whether education meets JD requirements. Flag if degree field doesn't match or if certifications are missing."},
+    {"section": "Overall", "note": "The 6-second recruiter scan verdict — what stands out (good or bad) in the first glance."}
+  ],
+  "skillGapHeatmap": [{"skill": "exact skill/keyword from JD", "status": "missing|weak|strong", "jdMention": true, "resumeMention": true/false, "detail": "where/how it appears on resume, or why it's marked weak"}] (8-12 key requirements from the JD),
+  "priorities": [{"rank": 1, "issue": "most impactful gap", "effort": "Low|Medium|High", "impact": "Low|Medium|High", "action": "exact step to fix this, not generic advice"}] (top 3),
+  "competition": {"estimatedApplicants": number, "estimatedRank": number, "percentile": number, "competitionLevel": "Low|Medium|High|Extreme"},
+  "bulletRewrite": {"before": "copy their weakest actual bullet verbatim", "after": "rewritten with metrics and XYZ formula", "why": "specific explanation of what changed and why it's stronger"},
+  "atsScore": {
+    "score": number (0-100),
+    "issues": [{"category": "Keywords|Formatting|Sections|Length|Contact Info", "severity": "Critical|Warning|Minor", "issue": "specific problem found, not generic"}],
+    "missingKeywords": ["exact keywords from JD not found in resume"],
+    "tips": ["3 specific, actionable ATS optimization tips referencing this exact resume and JD"]
+  },
+  "hiringManagerQuote": "What the hiring manager probably said when reviewing this resume (funny, specific to this candidate)",
+  "improvements": ["5 specific actionable improvements — each one should reference a concrete change to make, not generic advice like 'tailor your resume'. Example: 'Add a Projects section showcasing a distributed systems project since the JD emphasizes microservices experience you claim but don't demonstrate'"]
 }`;
 
 		const completion = await openai.chat.completions.create({
@@ -232,7 +254,7 @@ Return ONLY a JSON object with these fields:
 				},
 			],
 			temperature: 1,
-			max_tokens: 4096,
+			max_tokens: 8192,
 		});
 
 		let content = completion.choices[0].message.content;
