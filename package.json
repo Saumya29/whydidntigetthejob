@@ -15,7 +15,6 @@
 		"@clerk/nextjs": "^6.37.3",
 		"@radix-ui/react-slot": "^1.2.4",
 		"@sentry/nextjs": "^10.38.0",
-		"@stripe/stripe-js": "^8.7.0",
 		"@types/pdf-parse": "^1.1.5",
 		"@upstash/ratelimit": "^2.0.8",
 		"@upstash/redis": "^1.36.2",
@@ -31,7 +30,6 @@
 		"pdf-parse": "^2.4.5",
 		"react": "^18",
 		"react-dom": "^18",
-		"stripe": "^20.3.1",
 		"tailwind-merge": "^3.4.0",
 		"tailwindcss-animate": "^1.0.7"
 	},

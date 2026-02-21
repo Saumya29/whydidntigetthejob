@@ -107,6 +107,38 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 	const [userStats, setUserStats] = useState<UserStats | null>(null);
 	const [submissions, setSubmissions] = useState<Submission[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [creditEmail, setCreditEmail] = useState("");
+	const [creditCount, setCreditCount] = useState("3");
+	const [creditLoading, setCreditLoading] = useState(false);
+	const [creditMessage, setCreditMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+	const handleAddCredits = async () => {
+		if (!creditEmail || !creditCount) return;
+		setCreditLoading(true);
+		setCreditMessage(null);
+		try {
+			const res = await fetch("/api/admin/add-credits", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					email: creditEmail,
+					count: Number(creditCount),
+					password: ADMIN_PASSWORD,
+				}),
+			});
+			const data = await res.json();
+			if (res.ok) {
+				setCreditMessage({ type: "success", text: `Added ${creditCount} credits to ${creditEmail}. Now has ${data.remaining} remaining.` });
+				setCreditEmail("");
+			} else {
+				setCreditMessage({ type: "error", text: data.error || "Failed to add credits" });
+			}
+		} catch {
+			setCreditMessage({ type: "error", text: "Something went wrong" });
+		} finally {
+			setCreditLoading(false);
+		}
+	};
 
 	useEffect(() => {
 		fetchDashboardData();
@@ -339,6 +371,50 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 							</div>
 						)}
 					</div>
+				</div>
+
+				{/* Add Credits */}
+				<div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 space-y-4">
+					<div className="flex items-center gap-3">
+						<div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center">
+							<span className="text-xl">🔥</span>
+						</div>
+						<div>
+							<h3 className="font-semibold text-white">Add Credits</h3>
+							<p className="text-zinc-500 text-sm">Manually add roasts to a user account</p>
+						</div>
+					</div>
+					<div className="flex gap-3">
+						<Input
+							type="email"
+							placeholder="user@email.com"
+							value={creditEmail}
+							onChange={(e) => setCreditEmail(e.target.value)}
+							className="bg-zinc-950 border-zinc-700 text-zinc-100 flex-1"
+						/>
+						<Input
+							type="number"
+							min="1"
+							max="100"
+							value={creditCount}
+							onChange={(e) => setCreditCount(e.target.value)}
+							className="bg-zinc-950 border-zinc-700 text-zinc-100 w-20"
+						/>
+						<Button
+							onClick={handleAddCredits}
+							disabled={creditLoading || !creditEmail}
+							className="bg-red-600 hover:bg-red-700 text-white whitespace-nowrap"
+						>
+							{creditLoading ? "Adding..." : "Add Credits"}
+						</Button>
+					</div>
+					{creditMessage && (
+						<div className={`rounded-lg p-3 ${creditMessage.type === "success" ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-red-500/10 border border-red-500/20"}`}>
+							<p className={`text-sm ${creditMessage.type === "success" ? "text-emerald-400" : "text-red-400"}`}>
+								{creditMessage.text}
+							</p>
+						</div>
+					)}
 				</div>
 
 				{/* Quick Actions */}

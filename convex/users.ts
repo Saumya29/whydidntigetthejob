@@ -104,6 +104,30 @@ export const addRoasts = mutation({
 	},
 });
 
+// Add roasts by email (for admin use)
+export const addRoastsByEmail = mutation({
+	args: {
+		email: v.string(),
+		count: v.number(),
+	},
+	handler: async (ctx, args) => {
+		const user = await ctx.db
+			.query("users")
+			.withIndex("by_email", (q) => q.eq("email", args.email.toLowerCase().trim()))
+			.first();
+
+		if (!user) {
+			return { success: false, error: "User not found" };
+		}
+
+		await ctx.db.patch(user._id, {
+			roastsRemaining: user.roastsRemaining + args.count,
+		});
+
+		return { success: true, remaining: user.roastsRemaining + args.count };
+	},
+});
+
 // Get user stats
 export const getStats = query({
 	args: { clerkId: v.string() },
