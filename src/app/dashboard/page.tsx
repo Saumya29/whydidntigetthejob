@@ -3,6 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../convex/_generated/api";
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export default async function DashboardPage() {
 	const { userId } = await auth();
@@ -12,9 +16,15 @@ export default async function DashboardPage() {
 		redirect("/sign-in");
 	}
 
-	// TODO: Fetch user's roast history and remaining roasts from Convex
-	const roastsRemaining: number = 3; // Placeholder
-	const roastHistory: { id: string; grade: string; headline: string; createdAt: string }[] = []; // Placeholder
+	// Fetch real data from Convex
+	const [stats, results] = await Promise.all([
+		convex.query(api.users.getStats, { clerkId: userId }),
+		convex.query(api.results.getByUser, { clerkId: userId }),
+	]);
+
+	const roastsRemaining = stats?.roastsRemaining ?? 0;
+	const totalRoasts = stats?.totalRoasts ?? 0;
+	const plan = stats?.plan ?? "free";
 
 	return (
 		<main className="px-4 py-8 md:py-12">
@@ -36,7 +46,16 @@ export default async function DashboardPage() {
 						</div>
 						<p className="text-4xl font-bold text-white">{roastsRemaining}</p>
 						{roastsRemaining === 0 && (
-							<p className="text-red-400 text-sm mt-2">No credits remaining</p>
+							<div className="mt-2">
+								<p className="text-red-400 text-sm">No credits remaining</p>
+								<p className="text-zinc-500 text-xs mt-1">
+									Contact{" "}
+									<a href="mailto:saumyatiwari.29@gmail.com" className="text-red-400 hover:underline">
+										saumyatiwari.29@gmail.com
+									</a>
+									{" "}for more
+								</p>
+							</div>
 						)}
 					</div>
 
@@ -45,7 +64,7 @@ export default async function DashboardPage() {
 							<span className="text-2xl">📊</span>
 							<span className="text-zinc-400">Total Roasts</span>
 						</div>
-						<p className="text-4xl font-bold text-white">{roastHistory.length}</p>
+						<p className="text-4xl font-bold text-white">{totalRoasts}</p>
 					</div>
 
 					<div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6">
@@ -53,7 +72,7 @@ export default async function DashboardPage() {
 							<span className="text-2xl">⭐</span>
 							<span className="text-zinc-400">Plan</span>
 						</div>
-						<Badge className="bg-zinc-700 text-zinc-200 text-lg px-3 py-1">Free</Badge>
+						<Badge className="bg-zinc-700 text-zinc-200 text-lg px-3 py-1 capitalize">{plan}</Badge>
 					</div>
 				</div>
 
@@ -74,12 +93,12 @@ export default async function DashboardPage() {
 					<div className="p-6 border-b border-zinc-800">
 						<h2 className="text-xl font-semibold">Roast History</h2>
 					</div>
-					{roastHistory.length > 0 ? (
+					{results.length > 0 ? (
 						<div className="divide-y divide-zinc-800">
-							{roastHistory.map((roast) => (
+							{results.map((roast) => (
 								<Link
-									key={roast.id}
-									href={`/results/${roast.id}`}
+									key={roast.resultId}
+									href={`/results/${roast.resultId}`}
 									className="flex items-center justify-between p-4 hover:bg-zinc-800/50 transition-colors"
 								>
 									<div className="flex items-center gap-4">
@@ -88,7 +107,9 @@ export default async function DashboardPage() {
 										</span>
 										<div>
 											<p className="text-zinc-200">{roast.headline}</p>
-											<p className="text-zinc-500 text-sm">{roast.createdAt}</p>
+											<p className="text-zinc-500 text-sm">
+												{new Date(roast.createdAt).toLocaleDateString()}
+											</p>
 										</div>
 									</div>
 									<span className="text-zinc-500">→</span>

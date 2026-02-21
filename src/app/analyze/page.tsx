@@ -262,15 +262,25 @@ export default function AnalyzePage() {
 						Upload your resume PDF or paste it below
 					</p>
 					{roastsRemaining !== null && (
-						<div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-							roastsRemaining > 0
-								? "bg-zinc-800/50 border border-zinc-700"
-								: "bg-red-500/20 border border-red-500/30"
-						}`}>
-							<span className="text-lg">🔥</span>
-							<span className={roastsRemaining > 0 ? "text-zinc-300" : "text-red-400"}>
-								<span className="font-bold text-white">{roastsRemaining}</span> credit{roastsRemaining !== 1 ? "s" : ""} remaining
-							</span>
+						<div className="flex flex-col items-center gap-2">
+							<div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
+								roastsRemaining > 0
+									? "bg-zinc-800/50 border border-zinc-700"
+									: "bg-red-500/20 border border-red-500/30"
+							}`}>
+								<span className="text-lg">🔥</span>
+								<span className={roastsRemaining > 0 ? "text-zinc-300" : "text-red-400"}>
+									<span className="font-bold text-white">{roastsRemaining}</span> credit{roastsRemaining !== 1 ? "s" : ""} remaining
+								</span>
+							</div>
+							{roastsRemaining === 0 && (
+								<p className="text-sm text-zinc-400">
+									Need more credits? Contact{" "}
+									<a href="mailto:saumyatiwari.29@gmail.com" className="text-red-400 hover:underline">
+										saumyatiwari.29@gmail.com
+									</a>
+								</p>
+							)}
 						</div>
 					)}
 				</div>
