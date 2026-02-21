@@ -224,7 +224,7 @@ Return ONLY a JSON object with these fields:
 			messages: [
 				{
 					role: "system",
-					content: "You are a brutally honest hiring expert. Respond with valid JSON only. No markdown, no code fences, no extra text.",
+					content: `You are a brutally honest hiring expert. Today's date is ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}. Respond with valid JSON only. No markdown, no code fences, no extra text.`,
 				},
 				{
 					role: "user",
