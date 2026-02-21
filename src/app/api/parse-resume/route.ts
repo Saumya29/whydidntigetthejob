@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 import { checkRateLimit, getIP } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
 		const arrayBuffer = await file.arrayBuffer();
 		const buffer = Buffer.from(arrayBuffer);
 
-		const result = await pdfParse(buffer);
+		const parser = new PDFParse({ data: buffer });
+		const result = await parser.getText();
 
 		if (!result.text || result.text.trim().length === 0) {
 			return NextResponse.json(
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
 
 		return NextResponse.json({
 			text,
-			pages: result.numpages,
+			pages: result.total,
 			chars: text.length,
 		});
 	} catch (error) {
