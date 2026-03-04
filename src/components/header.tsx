@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, useClerk, useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
 const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 function AuthNav() {
 	const { isSignedIn, isLoaded } = useUser();
+	const { signOut } = useClerk();
 
 	if (!isLoaded) {
 		return <div className="w-20 h-8 bg-secondary animate-pulse rounded" />;
@@ -26,14 +27,14 @@ function AuthNav() {
 						NEW ROAST
 					</Button>
 				</Link>
-				<UserButton
-					afterSignOutUrl="/"
-					appearance={{
-						elements: {
-							avatarBox: "w-8 h-8",
-						},
-					}}
-				/>
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => signOut({ redirectUrl: "/" })}
+					className="text-muted-foreground hover:text-foreground hover:bg-secondary font-mono text-xs tracking-wide"
+				>
+					SIGN OUT
+				</Button>
 			</>
 		);
 	}

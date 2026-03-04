@@ -253,7 +253,7 @@ export default function AnalyzePage() {
 						if (data.remaining !== undefined) setRoastsRemaining(data.remaining);
 						window.location.href = `/results/${data.id}`;
 					} else if (res.status === 401) {
-						setError("Your session expired. Please sign in again.");
+						window.location.href = "/sign-in?redirect_url=/analyze";
 					} else if (data.needsPayment) {
 						setRoastsRemaining(0);
 						setError("No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits.");
