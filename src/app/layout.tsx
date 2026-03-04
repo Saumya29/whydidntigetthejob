@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Space_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { ConvexClientProvider } from "@/components/convex-provider";
 import { Header } from "@/components/header";
 
-const inter = Inter({ subsets: ["latin"] });
+const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const _spaceMono = Space_Mono({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-space-mono" });
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://whydidntigetthejob.com";
 
@@ -142,8 +143,8 @@ export default function RootLayout({
 }>) {
 	return (
 		<AuthWrapper>
-			<html lang="en">
-				<body className={`${inter.className} bg-zinc-950 text-zinc-100 min-h-screen antialiased`}>
+			<html lang="en" className={`dark ${_inter.variable} ${_spaceMono.variable}`}>
+				<body className="font-sans bg-background text-foreground min-h-screen antialiased">
 					<ConvexClientProvider>
 						<Header />
 						<div className="pt-14">
