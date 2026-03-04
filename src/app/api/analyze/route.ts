@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth, currentUser, verifyToken } from "@clerk/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../convex/_generated/api";
 import { checkRateLimit, getIP } from "@/lib/rate-limit";
@@ -152,7 +152,27 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Get authenticated user from Clerk
-		const { userId } = await auth();
+		let userId: string | null = null;
+
+		// Try middleware-injected auth first (cookie-based)
+		const authResult = await auth();
+		userId = authResult.userId;
+
+		// Fallback: verify Bearer token directly if cookie auth failed
+		if (!userId) {
+			const authHeader = request.headers.get("Authorization");
+			if (authHeader?.startsWith("Bearer ")) {
+				try {
+					const token = authHeader.slice(7);
+					const decoded = await verifyToken(token, {
+						secretKey: process.env.CLERK_SECRET_KEY!,
+					});
+					userId = decoded.sub;
+				} catch (e) {
+					console.warn("Bearer token verification failed:", e);
+				}
+			}
+		}
 
 		if (!userId) {
 			return NextResponse.json(
