@@ -224,31 +224,52 @@ export default function AnalyzePage() {
 			{ msg: "Analyzing the job requirements...", delay: 4000 },
 			{ msg: "Comparing qualifications...", delay: 7000 },
 			{ msg: "Writing your roast...", delay: 11000 },
-			{ msg: "Almost done, putting the finishing touches...", delay: 18000 },
+			{ msg: "Cross-referencing skills with job requirements...", delay: 18000 },
+			{ msg: "Calculating your competition ranking...", delay: 25000 },
+			{ msg: "Generating ATS compatibility score...", delay: 35000 },
+			{ msg: "Crafting your brutally honest feedback...", delay: 45000 },
+			{ msg: "Almost done, putting the finishing touches...", delay: 55000 },
 		];
 		const timers = steps.map((s) => setTimeout(() => setLoadingStep(s.msg), s.delay));
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 90000);
 		try {
 			const res = await fetch("/api/analyze", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
 				body: JSON.stringify({ resume, jobDescription }),
+				signal: controller.signal,
 			});
-			const data = await res.json();
-			if (data.id) {
-				if (data.remaining !== undefined) setRoastsRemaining(data.remaining);
-				window.location.href = `/results/${data.id}`;
-			} else if (res.status === 401) {
-				setError("Your session expired. Please sign in again.");
-			} else if (data.needsPayment) {
-				setRoastsRemaining(0);
-				setError("No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits.");
+			if (res.status === 504) {
+				setError("The analysis took too long. Please try again — it usually works on the second attempt.");
 			} else {
-				setError(data.error || "Analysis failed. Please try again.");
+				const contentType = res.headers.get("content-type") || "";
+				if (!contentType.includes("application/json")) {
+					setError("The server took too long to respond. Please try again.");
+				} else {
+					const data = await res.json();
+					if (data.id) {
+						if (data.remaining !== undefined) setRoastsRemaining(data.remaining);
+						window.location.href = `/results/${data.id}`;
+					} else if (res.status === 401) {
+						setError("Your session expired. Please sign in again.");
+					} else if (data.needsPayment) {
+						setRoastsRemaining(0);
+						setError("No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits.");
+					} else {
+						setError(data.error || "Analysis failed. Please try again.");
+					}
+				}
 			}
-		} catch {
-			setError("Something went wrong. Please try again.");
+		} catch (err) {
+			if (err instanceof DOMException && err.name === "AbortError") {
+				setError("The analysis is taking too long. Please try again.");
+			} else {
+				setError("Something went wrong. Please check your connection and try again.");
+			}
 		} finally {
+			clearTimeout(timeout);
 			for (const t of timers) clearTimeout(t);
 			setLoading(false);
 			setLoadingStep("");
