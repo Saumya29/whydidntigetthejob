@@ -6,7 +6,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../convex/_generated/api";
 import { checkRateLimit, getIP } from "@/lib/rate-limit";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const openai = new OpenAI({
 	apiKey: process.env.KIMI_API_KEY,
