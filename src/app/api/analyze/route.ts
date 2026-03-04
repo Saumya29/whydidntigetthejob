@@ -306,11 +306,11 @@ Return ONLY a JSON object with these fields:
 						...sanitized,
 					};
 
-					// Save to Convex
-					await convex.mutation(api.results.save, result);
-
-					// Use a roast
-					const roastResult = await convex.mutation(api.users.useRoast, { clerkId: userId });
+					// Save result and deduct roast in parallel
+					const [, roastResult] = await Promise.all([
+						convex.mutation(api.results.save, result),
+						convex.mutation(api.users.useRoast, { clerkId: userId }),
+					]);
 
 					// Send final JSON result
 					controller.enqueue(encoder.encode(JSON.stringify({ id: resultId, remaining: roastResult.remaining })));
@@ -338,7 +338,6 @@ Return ONLY a JSON object with these fields:
 			headers: {
 				"Content-Type": "text/plain; charset=utf-8",
 				"Cache-Control": "no-cache",
-				"Transfer-Encoding": "chunked",
 			},
 		});
 	} catch (error) {

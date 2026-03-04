@@ -280,7 +280,13 @@ export default function AnalyzePage() {
 				return;
 			}
 
-			const data: { id?: string; remaining?: number; error?: string } = JSON.parse(lastLine);
+			let data: { id?: string; remaining?: number; error?: string };
+			try {
+				data = JSON.parse(lastLine);
+			} catch {
+				setError("The server returned an unexpected response. Please try again.");
+				return;
+			}
 
 			if (data.id) {
 				if (data.remaining !== undefined) setRoastsRemaining(data.remaining);
