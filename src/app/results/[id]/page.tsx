@@ -207,7 +207,7 @@ function ATSScoreSection({ ats }: { ats: ATSScore }) {
 				</div>
 			</div>
 
-			{ats.issues?.length > 0 && (
+			{(ats.issues?.length ?? 0) > 0 && (
 				<div className="flex flex-col gap-2">
 					<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">Issues Found</span>
 					{ats.issues.map((issue, i) => (
@@ -221,7 +221,7 @@ function ATSScoreSection({ ats }: { ats: ATSScore }) {
 				</div>
 			)}
 
-			{ats.missingKeywords?.length > 0 && (
+			{(ats.missingKeywords?.length ?? 0) > 0 && (
 				<div>
 					<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase block mb-2">Missing Keywords</span>
 					<div className="flex flex-wrap gap-1.5">
@@ -234,7 +234,7 @@ function ATSScoreSection({ ats }: { ats: ATSScore }) {
 				</div>
 			)}
 
-			{ats.tips?.length > 0 && (
+			{(ats.tips?.length ?? 0) > 0 && (
 				<div>
 					<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase block mb-2">Optimization Tips</span>
 					<ul className="flex flex-col gap-2">
@@ -352,16 +352,16 @@ export default function ResultsPage() {
 				)}
 
 				{/* ── 4. Skill Gap Heatmap ── */}
-				{result.skillGapHeatmap?.length > 0 && (
+				{(result.skillGapHeatmap?.length ?? 0) > 0 && (
 					<Section label="Skill Gap Analysis">
-						<SkillGapHeatmap skills={result.skillGapHeatmap} />
+						<SkillGapHeatmap skills={result.skillGapHeatmap!} />
 					</Section>
 				)}
 
 				{/* ── 5. Fix This First ── */}
-				{result.priorities?.length > 0 && (
+				{(result.priorities?.length ?? 0) > 0 && (
 					<Section label="Fix This First">
-						<PriorityList priorities={result.priorities} />
+						<PriorityList priorities={result.priorities!} />
 					</Section>
 				)}
 
@@ -373,9 +373,9 @@ export default function ResultsPage() {
 				)}
 
 				{/* ── 7. Recruiter Notes ── */}
-				{result.recruiterNotes?.length > 0 && (
+				{(result.recruiterNotes?.length ?? 0) > 0 && (
 					<Section label="Recruiter Notes">
-						<RecruiterNotesSection notes={result.recruiterNotes} />
+						<RecruiterNotesSection notes={result.recruiterNotes!} />
 					</Section>
 				)}
 
