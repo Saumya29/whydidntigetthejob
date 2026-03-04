@@ -251,26 +251,34 @@ export default function AnalyzePage() {
 				body: JSON.stringify({ resume, jobDescription }),
 				signal: controller.signal,
 			});
-			if (res.status === 504) {
-				setError("The analysis took too long. Please try again — it usually works on the second attempt.");
+			clearTimeout(timeout);
+
+			// Try to parse JSON — if it fails, it's a non-JSON response (e.g. timeout HTML page)
+			let data: { id?: string; remaining?: number; needsPayment?: boolean; error?: string };
+			try {
+				data = await res.json();
+			} catch {
+				setError("The server returned an unexpected response. Please try again.");
+				return;
+			}
+
+			// Success — redirect to results
+			if (data.id) {
+				if (data.remaining !== undefined) setRoastsRemaining(data.remaining);
+				window.location.href = `/results/${data.id}`;
+				return;
+			}
+
+			// Error responses
+			if (res.status === 401) {
+				window.location.href = "/sign-in?redirect_url=/analyze";
+				return;
+			}
+			if (data.needsPayment) {
+				setRoastsRemaining(0);
+				setError("No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits.");
 			} else {
-				const contentType = res.headers.get("content-type") || "";
-				if (!contentType.includes("application/json")) {
-					setError("The server took too long to respond. Please try again.");
-				} else {
-					const data = await res.json();
-					if (data.id) {
-						if (data.remaining !== undefined) setRoastsRemaining(data.remaining);
-						window.location.href = `/results/${data.id}`;
-					} else if (res.status === 401) {
-						window.location.href = "/sign-in?redirect_url=/analyze";
-					} else if (data.needsPayment) {
-						setRoastsRemaining(0);
-						setError("No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits.");
-					} else {
-						setError(data.error || "Analysis failed. Please try again.");
-					}
-				}
+				setError(data.error || "Analysis failed. Please try again.");
 			}
 		} catch (err) {
 			if (err instanceof DOMException && err.name === "AbortError") {
