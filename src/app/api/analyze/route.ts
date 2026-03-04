@@ -9,8 +9,7 @@ import { checkRateLimit, getIP } from "@/lib/rate-limit";
 export const maxDuration = 300;
 
 const openai = new OpenAI({
-	apiKey: process.env.KIMI_API_KEY,
-	baseURL: "https://api.moonshot.ai/v1",
+	apiKey: process.env.OPENAI_API_KEY,
 });
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
@@ -137,9 +136,9 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Check API key
-		if (!process.env.KIMI_API_KEY) {
+		if (!process.env.OPENAI_API_KEY) {
 			return NextResponse.json(
-				{ error: "Kimi API key not configured. Add KIMI_API_KEY to environment variables." },
+				{ error: "OpenAI API key not configured. Add OPENAI_API_KEY to environment variables." },
 				{ status: 500 },
 			);
 		}
@@ -244,7 +243,7 @@ Return ONLY a JSON object with these fields:
 }`;
 
 		const completion = await openai.chat.completions.create({
-			model: "kimi-k2.5",
+			model: "gpt-4o",
 			messages: [
 				{
 					role: "system",
