@@ -4,12 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-
-// Map Convex result to component interface
 import { ShareButtons } from "@/components/share-buttons";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface SkillGap {
 	skill: string;
@@ -57,64 +53,55 @@ interface BulletRewrite {
 	why: string;
 }
 
-interface AnalysisResult {
-	resultId: string;
-	grade: string;
-	headline: string;
-	rejection: string;
-	recruiterNotes: RecruiterNote[];
-	skillGapHeatmap: SkillGap[];
-	priorities: Priority[];
-	competition: Competition;
-	bulletRewrite: BulletRewrite | null;
-	atsScore: ATSScore;
-	hiringManagerQuote: string;
-	improvements: string[];
-	skillGaps: string[];
-}
-
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://whydidntigetthejob.vercel.app";
 
-// Grade color mapping
-const gradeColors: Record<string, { bg: string; text: string; ring: string }> = {
-	"A+": { bg: "bg-emerald-500", text: "text-emerald-400", ring: "ring-emerald-500/30" },
-	A: { bg: "bg-green-500", text: "text-green-400", ring: "ring-green-500/30" },
-	"A-": { bg: "bg-green-500", text: "text-green-400", ring: "ring-green-500/30" },
-	"B+": { bg: "bg-lime-500", text: "text-lime-400", ring: "ring-lime-500/30" },
-	B: { bg: "bg-lime-500", text: "text-lime-400", ring: "ring-lime-500/30" },
-	"B-": { bg: "bg-yellow-500", text: "text-yellow-400", ring: "ring-yellow-500/30" },
-	"C+": { bg: "bg-yellow-500", text: "text-yellow-400", ring: "ring-yellow-500/30" },
-	C: { bg: "bg-yellow-500", text: "text-yellow-400", ring: "ring-yellow-500/30" },
-	"C-": { bg: "bg-orange-500", text: "text-orange-400", ring: "ring-orange-500/30" },
-	"D+": { bg: "bg-orange-500", text: "text-orange-400", ring: "ring-orange-500/30" },
-	D: { bg: "bg-orange-600", text: "text-orange-400", ring: "ring-orange-500/30" },
-	"D-": { bg: "bg-red-500", text: "text-red-400", ring: "ring-red-500/30" },
-	F: { bg: "bg-red-600", text: "text-red-400", ring: "ring-red-500/30" },
+// Grade to color mapping — using semantic tokens
+const gradeColors: Record<string, { text: string; bg: string; border: string }> = {
+	"A+": { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" },
+	A: { text: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30" },
+	"A-": { text: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30" },
+	"B+": { text: "text-lime-400", bg: "bg-lime-500/10", border: "border-lime-500/30" },
+	B: { text: "text-lime-400", bg: "bg-lime-500/10", border: "border-lime-500/30" },
+	"B-": { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30" },
+	"C+": { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30" },
+	C: { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30" },
+	"C-": { text: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30" },
+	"D+": { text: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30" },
+	D: { text: "text-orange-500", bg: "bg-orange-600/10", border: "border-orange-600/30" },
+	"D-": { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
+	F: { text: "text-red-500", bg: "bg-red-600/10", border: "border-red-600/30" },
 };
 
 function getGradeStyle(grade: string) {
 	return gradeColors[grade] || gradeColors["C"];
 }
 
-// Skill Gap Heatmap Component
-function SkillGapHeatmap({ skills }: { skills: SkillGap[] }) {
-	const statusColors = {
-		missing: { bg: "bg-red-500/20", border: "border-red-500/40", text: "text-red-400", label: "Missing" },
-		weak: { bg: "bg-yellow-500/20", border: "border-yellow-500/40", text: "text-yellow-400", label: "Weak" },
-		strong: { bg: "bg-green-500/20", border: "border-green-500/40", text: "text-green-400", label: "Strong" },
-	};
-
+// Small reusable section container
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
 	return (
-		<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+		<div className="bg-surface border border-border rounded overflow-hidden">
+			<div className="flex items-center gap-3 px-5 py-3 border-b border-border">
+				<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">{label}</span>
+			</div>
+			<div className="p-5">{children}</div>
+		</div>
+	);
+}
+
+function SkillGapHeatmap({ skills }: { skills: SkillGap[] }) {
+	const map = {
+		missing: { bg: "bg-red-500/10", border: "border-red-500/25", text: "text-red-400", label: "MISSING" },
+		weak: { bg: "bg-yellow-500/10", border: "border-yellow-500/25", text: "text-yellow-400", label: "WEAK" },
+		strong: { bg: "bg-green-500/10", border: "border-green-500/25", text: "text-green-400", label: "STRONG" },
+	};
+	return (
+		<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 			{skills.map((skill, i) => {
-				const colors = statusColors[skill.status];
+				const c = map[skill.status];
 				return (
-					<div
-						key={i}
-						className={`${colors.bg} ${colors.border} border rounded-lg p-3 flex items-center justify-between`}
-					>
-						<span className="text-zinc-200 text-sm font-medium">{skill.skill}</span>
-						<span className={`${colors.text} text-xs font-semibold uppercase`}>{colors.label}</span>
+					<div key={i} className={`${c.bg} ${c.border} border rounded flex items-center justify-between px-3 py-2.5`}>
+						<span className="text-foreground text-sm">{skill.skill}</span>
+						<span className={`${c.text} font-mono text-[10px] tracking-widest`}>{c.label}</span>
 					</div>
 				);
 			})}
@@ -122,30 +109,26 @@ function SkillGapHeatmap({ skills }: { skills: SkillGap[] }) {
 	);
 }
 
-// Priority List Component
 function PriorityList({ priorities }: { priorities: Priority[] }) {
 	const effortColors = { Low: "text-green-400", Medium: "text-yellow-400", High: "text-red-400" };
-	const impactColors = { Low: "text-zinc-400", Medium: "text-yellow-400", High: "text-green-400" };
-
+	const impactColors = { Low: "text-muted-foreground", Medium: "text-yellow-400", High: "text-green-400" };
 	return (
-		<div className="space-y-4">
+		<div className="flex flex-col gap-3">
 			{priorities.map((p) => (
-				<div key={p.rank} className="bg-zinc-800/50 rounded-lg p-4 border border-zinc-700/50">
-					<div className="flex items-start gap-3">
-						<span className="bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
-							{p.rank}
-						</span>
-						<div className="flex-1 min-w-0">
-							<p className="text-zinc-100 font-medium">{p.issue}</p>
-							<p className="text-zinc-400 text-sm mt-1">{p.action}</p>
-							<div className="flex gap-4 mt-2 text-xs">
-								<span>
-									Effort: <span className={effortColors[p.effort]}>{p.effort}</span>
-								</span>
-								<span>
-									Impact: <span className={impactColors[p.impact]}>{p.impact}</span>
-								</span>
-							</div>
+				<div key={p.rank} className="flex items-start gap-4 bg-surface-raised border border-border rounded px-4 py-4">
+					<span className="bg-primary text-primary-foreground w-6 h-6 rounded font-mono text-xs font-bold flex items-center justify-center flex-shrink-0">
+						{p.rank}
+					</span>
+					<div className="flex-1 min-w-0">
+						<p className="text-foreground font-medium text-sm">{p.issue}</p>
+						<p className="text-muted-foreground text-sm mt-1">{p.action}</p>
+						<div className="flex gap-5 mt-2">
+							<span className="font-mono text-[10px] tracking-wide text-muted-foreground">
+								EFFORT: <span className={effortColors[p.effort]}>{p.effort.toUpperCase()}</span>
+							</span>
+							<span className="font-mono text-[10px] tracking-wide text-muted-foreground">
+								IMPACT: <span className={impactColors[p.impact]}>{p.impact.toUpperCase()}</span>
+							</span>
 						</div>
 					</div>
 				</div>
@@ -154,21 +137,19 @@ function PriorityList({ priorities }: { priorities: Priority[] }) {
 	);
 }
 
-// Recruiter Notes Component
 function RecruiterNotesSection({ notes }: { notes: RecruiterNote[] }) {
 	return (
-		<div className="space-y-3">
+		<div className="flex flex-col gap-4">
 			{notes.map((note, i) => (
-				<div key={i} className="border-l-2 border-zinc-700 pl-4 py-1">
-					<p className="text-zinc-500 text-xs uppercase tracking-wide mb-1">{note.section}</p>
-					<p className="text-zinc-300 text-sm italic">&ldquo;{note.note}&rdquo;</p>
+				<div key={i} className="flex flex-col gap-1">
+					<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">{note.section}</span>
+					<p className="text-muted-foreground text-sm italic leading-relaxed">&ldquo;{note.note}&rdquo;</p>
 				</div>
 			))}
 		</div>
 	);
 }
 
-// Competition Score Component
 function CompetitionScore({ competition }: { competition: Competition }) {
 	const levelColors = {
 		Low: "text-green-400",
@@ -176,95 +157,90 @@ function CompetitionScore({ competition }: { competition: Competition }) {
 		High: "text-orange-400",
 		Extreme: "text-red-400",
 	};
-
+	const cells = [
+		{ value: `~${competition.estimatedApplicants}`, label: "EST. APPLICANTS" },
+		{ value: `#${competition.estimatedRank}`, label: "YOUR EST. RANK" },
+		{ value: `${competition.percentile}%`, label: "PERCENTILE" },
+		{ value: competition.competitionLevel, label: "COMPETITION", color: levelColors[competition.competitionLevel] },
+	];
 	return (
-		<div className="grid grid-cols-2 gap-4">
-			<div className="bg-zinc-800/50 rounded-lg p-4 text-center">
-				<p className="text-3xl font-bold text-white">~{competition.estimatedApplicants}</p>
-				<p className="text-zinc-400 text-sm">Est. Applicants</p>
-			</div>
-			<div className="bg-zinc-800/50 rounded-lg p-4 text-center">
-				<p className="text-3xl font-bold text-white">#{competition.estimatedRank}</p>
-				<p className="text-zinc-400 text-sm">Your Est. Rank</p>
-			</div>
-			<div className="bg-zinc-800/50 rounded-lg p-4 text-center">
-				<p className="text-3xl font-bold text-white">{competition.percentile}%</p>
-				<p className="text-zinc-400 text-sm">Percentile</p>
-			</div>
-			<div className="bg-zinc-800/50 rounded-lg p-4 text-center">
-				<p className={`text-2xl font-bold ${levelColors[competition.competitionLevel]}`}>
-					{competition.competitionLevel}
-				</p>
-				<p className="text-zinc-400 text-sm">Competition</p>
-			</div>
+		<div className="grid grid-cols-2 gap-2">
+			{cells.map((c) => (
+				<div key={c.label} className="bg-surface-raised border border-border rounded px-4 py-4 flex flex-col items-center gap-1 text-center">
+					<span className={`font-mono font-black text-2xl ${c.color || "text-foreground"}`}>{c.value}</span>
+					<span className="font-mono text-[10px] text-muted-foreground tracking-widest">{c.label}</span>
+				</div>
+			))}
 		</div>
 	);
 }
 
-// ATS Score Component
 function ATSScoreSection({ ats }: { ats: ATSScore }) {
-	const getScoreColor = (score: number) => {
-		if (score >= 80) return "text-green-400";
-		if (score >= 60) return "text-yellow-400";
-		if (score >= 40) return "text-orange-400";
-		return "text-red-400";
-	};
+	const scoreColor =
+		ats.score >= 80 ? "text-green-400" :
+		ats.score >= 60 ? "text-yellow-400" :
+		ats.score >= 40 ? "text-orange-400" :
+		"text-red-400";
 
-	const getScoreBg = (score: number) => {
-		if (score >= 80) return "from-green-500/20 to-green-500/5";
-		if (score >= 60) return "from-yellow-500/20 to-yellow-500/5";
-		if (score >= 40) return "from-orange-500/20 to-orange-500/5";
-		return "from-red-500/20 to-red-500/5";
-	};
+	const scoreBar =
+		ats.score >= 80 ? "bg-green-500" :
+		ats.score >= 60 ? "bg-yellow-500" :
+		ats.score >= 40 ? "bg-orange-500" :
+		"bg-red-500";
 
-	const severityColors: Record<string, string> = {
-		Critical: "bg-red-500/20 text-red-400 border-red-500/30",
-		Warning: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-		Minor: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
+	const severityClasses: Record<string, string> = {
+		Critical: "border-red-500/30 bg-red-500/10 text-red-400",
+		Warning: "border-yellow-500/30 bg-yellow-500/10 text-yellow-400",
+		Minor: "border-border bg-surface-raised text-muted-foreground",
 	};
 
 	return (
-		<div className="space-y-4">
-			<div className={`bg-gradient-to-r ${getScoreBg(ats.score)} rounded-xl p-6 text-center`}>
-				<p className={`text-6xl font-black ${getScoreColor(ats.score)}`}>{ats.score}</p>
-				<p className="text-zinc-400 text-sm mt-1">ATS Compatibility Score</p>
+		<div className="flex flex-col gap-5">
+			{/* Score meter */}
+			<div className="flex flex-col gap-3">
+				<div className="flex items-end justify-between">
+					<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">ATS Compatibility Score</span>
+					<span className={`font-mono font-black text-4xl leading-none ${scoreColor}`}>{ats.score}</span>
+				</div>
+				<div className="h-1.5 bg-surface-overlay rounded-full overflow-hidden">
+					<div className={`h-full ${scoreBar} rounded-full transition-all`} style={{ width: `${ats.score}%` }} />
+				</div>
 			</div>
 
-			{ats.issues && ats.issues.length > 0 && (
-				<div className="space-y-2">
-					<p className="text-zinc-500 text-xs uppercase tracking-wide">Issues Found</p>
+			{ats.issues?.length > 0 && (
+				<div className="flex flex-col gap-2">
+					<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">Issues Found</span>
 					{ats.issues.map((issue, i) => (
-						<div key={i} className={`${severityColors[issue.severity]} border rounded-lg p-3 flex items-start gap-3`}>
-							<span className="text-xs font-semibold uppercase flex-shrink-0">{issue.severity}</span>
-							<div>
-								<span className="text-zinc-300 text-sm font-medium">{issue.category}:</span>
-								<span className="text-zinc-400 text-sm ml-1">{issue.issue}</span>
-							</div>
+						<div key={i} className={`${severityClasses[issue.severity]} border rounded px-3 py-2.5 flex items-start gap-3`}>
+							<span className="font-mono text-[10px] tracking-widest flex-shrink-0">{issue.severity.toUpperCase()}</span>
+							<span className="text-muted-foreground text-sm">
+								<span className="text-foreground font-medium">{issue.category}:</span> {issue.issue}
+							</span>
 						</div>
 					))}
 				</div>
 			)}
 
-			{ats.missingKeywords && ats.missingKeywords.length > 0 && (
+			{ats.missingKeywords?.length > 0 && (
 				<div>
-					<p className="text-zinc-500 text-xs uppercase tracking-wide mb-2">Missing Keywords</p>
-					<div className="flex flex-wrap gap-2">
-						{ats.missingKeywords.map((keyword, i) => (
-							<span key={i} className="bg-red-500/10 text-red-400 text-xs px-2 py-1 rounded border border-red-500/20">
-								{keyword}
+					<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase block mb-2">Missing Keywords</span>
+					<div className="flex flex-wrap gap-1.5">
+						{ats.missingKeywords.map((kw, i) => (
+							<span key={i} className="font-mono text-[10px] px-2 py-1 bg-primary/10 text-primary border border-primary/20 rounded">
+								{kw}
 							</span>
 						))}
 					</div>
 				</div>
 			)}
 
-			{ats.tips && ats.tips.length > 0 && (
+			{ats.tips?.length > 0 && (
 				<div>
-					<p className="text-zinc-500 text-xs uppercase tracking-wide mb-2">ATS Optimization Tips</p>
-					<ul className="space-y-2">
+					<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase block mb-2">Optimization Tips</span>
+					<ul className="flex flex-col gap-2">
 						{ats.tips.map((tip, i) => (
-							<li key={i} className="flex items-start gap-2 text-zinc-300 text-sm">
-								<span className="text-green-400">💡</span>
+							<li key={i} className="flex items-start gap-2 text-muted-foreground text-sm">
+								<span className="text-green-400 flex-shrink-0">+</span>
 								{tip}
 							</li>
 						))}
@@ -275,21 +251,20 @@ function ATSScoreSection({ ats }: { ats: ATSScore }) {
 	);
 }
 
-// Bullet Rewrite Component
 function BulletRewriteSection({ rewrite }: { rewrite: BulletRewrite }) {
 	return (
-		<div className="space-y-4">
-			<div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-				<p className="text-red-400 text-xs uppercase tracking-wide mb-2">❌ Before (Your Version)</p>
-				<p className="text-zinc-300">&ldquo;{rewrite.before}&rdquo;</p>
+		<div className="flex flex-col gap-3">
+			<div className="bg-red-500/10 border border-red-500/20 rounded px-4 py-4">
+				<span className="font-mono text-[10px] text-red-400 tracking-widest block mb-2">BEFORE — YOUR VERSION</span>
+				<p className="text-muted-foreground text-sm leading-relaxed">&ldquo;{rewrite.before}&rdquo;</p>
 			</div>
-			<div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-				<p className="text-green-400 text-xs uppercase tracking-wide mb-2">✓ After (Improved)</p>
-				<p className="text-zinc-100 font-medium">&ldquo;{rewrite.after}&rdquo;</p>
+			<div className="bg-green-500/10 border border-green-500/20 rounded px-4 py-4">
+				<span className="font-mono text-[10px] text-green-400 tracking-widest block mb-2">AFTER — IMPROVED</span>
+				<p className="text-foreground text-sm font-medium leading-relaxed">&ldquo;{rewrite.after}&rdquo;</p>
 			</div>
-			<div className="bg-zinc-800/50 rounded-lg p-3">
-				<p className="text-zinc-400 text-sm">
-					<span className="text-zinc-300 font-medium">Why it&apos;s better:</span> {rewrite.why}
+			<div className="bg-surface-raised border border-border rounded px-4 py-3">
+				<p className="text-muted-foreground text-sm">
+					<span className="text-foreground font-medium">Why it&apos;s better:</span> {rewrite.why}
 				</p>
 			</div>
 		</div>
@@ -299,20 +274,17 @@ function BulletRewriteSection({ rewrite }: { rewrite: BulletRewrite }) {
 export default function ResultsPage() {
 	const params = useParams();
 	const id = params.id as string;
-	
-	// Fetch from Convex
 	const result = useQuery(api.results.getById, { resultId: id });
-	
-	// Loading state (result is undefined while loading)
+
 	if (result === undefined) {
 		return (
 			<main className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center">
-				<div className="flex items-center gap-3 text-zinc-400">
+				<div className="flex items-center gap-3 text-muted-foreground font-mono text-sm">
 					<svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
 						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
 						<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
 					</svg>
-					Loading your roast...
+					LOADING VERDICT...
 				</div>
 			</main>
 		);
@@ -321,11 +293,11 @@ export default function ResultsPage() {
 	if (!result) {
 		return (
 			<main className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4">
-				<div className="text-center space-y-4">
+				<div className="text-center flex flex-col items-center gap-4">
 					<h1 className="text-2xl font-bold">Results not found</h1>
-					<p className="text-zinc-400">This roast may have expired or doesn&apos;t exist.</p>
+					<p className="text-muted-foreground text-sm">This roast may have expired or doesn&apos;t exist.</p>
 					<Link href="/">
-						<Button>Get Roasted</Button>
+						<Button className="bg-primary hover:bg-brand-dim text-primary-foreground font-mono text-xs tracking-widest">GET ROASTED</Button>
 					</Link>
 				</div>
 			</main>
@@ -335,172 +307,116 @@ export default function ResultsPage() {
 	const gradeStyle = getGradeStyle(result.grade);
 
 	return (
-		<main className="px-4 py-8 md:py-12">
-			<div className="max-w-3xl mx-auto space-y-6">
-				{/* Header */}
-				<div className="text-center space-y-2">
-					<Badge variant="outline" className="text-red-400 border-red-400/50">
-						Your Roast Results
-					</Badge>
-					<h1 className="text-2xl md:text-3xl font-bold">The Verdict Is In</h1>
+		<main className="px-4 py-10 md:py-14">
+			<div className="max-w-3xl mx-auto flex flex-col gap-4">
+
+				{/* Page eyebrow */}
+				<div className="flex items-center gap-4 mb-2">
+					<div className="h-px flex-1 bg-border" />
+					<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">Your Roast Results</span>
+					<div className="h-px flex-1 bg-border" />
 				</div>
 
-				{/* 1. GRADE CARD */}
-				<Card className={`bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 overflow-hidden ring-2 ${gradeStyle.ring}`}>
-					<CardContent className="p-6 md:p-8">
-						<div className="flex items-center justify-between gap-4">
-							<div className="flex-1">
-								<p className="text-zinc-500 text-xs uppercase tracking-wider">Roast Grade</p>
-								<p className={`text-5xl md:text-6xl font-black mt-1 ${gradeStyle.text}`}>{result.grade}</p>
-							</div>
-							<div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl ${gradeStyle.bg} flex items-center justify-center shadow-lg`}>
-								<span className="text-3xl md:text-4xl font-black text-white">{result.grade}</span>
+				{/* ── 1. Grade card ── */}
+				<div className={`${gradeStyle.bg} ${gradeStyle.border} border rounded overflow-hidden`}>
+					<div className="flex items-stretch">
+						{/* Large grade */}
+						<div className="flex flex-col items-center justify-center px-8 py-8 border-r border-border/50 flex-shrink-0">
+							<span className={`font-mono font-black text-7xl md:text-8xl leading-none ${gradeStyle.text}`}>
+								{result.grade}
+							</span>
+							<span className="font-mono text-[10px] text-muted-foreground tracking-widest mt-2">GRADE</span>
+						</div>
+						{/* Headline */}
+						<div className="flex-1 px-6 py-6 flex flex-col justify-center gap-3">
+							<div>
+								<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase block mb-2">Verdict</span>
+								<p className="text-foreground text-lg font-medium leading-relaxed italic">&ldquo;{result.headline}&rdquo;</p>
 							</div>
 						</div>
-						<div className="mt-4 pt-4 border-t border-zinc-800">
-							<p className="text-lg md:text-xl text-zinc-300 italic">&ldquo;{result.headline}&rdquo;</p>
-						</div>
-					</CardContent>
-				</Card>
+					</div>
+				</div>
 
-				{/* 2. ATS SCORE */}
+				{/* ── 2. ATS Score ── */}
 				{result.atsScore && (
-					<Card className="bg-zinc-900 border-zinc-800">
-						<CardHeader className="pb-2">
-							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
-								🤖 ATS Compatibility
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<ATSScoreSection ats={result.atsScore} />
-						</CardContent>
-					</Card>
+					<Section label="ATS Compatibility">
+						<ATSScoreSection ats={result.atsScore} />
+					</Section>
 				)}
 
-				{/* 3. COMPETITION SCORE */}
+				{/* ── 3. Competition ── */}
 				{result.competition && (
-					<Card className="bg-zinc-900 border-zinc-800">
-						<CardHeader className="pb-2">
-							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
-								📊 Competition Analysis
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<CompetitionScore competition={result.competition} />
-						</CardContent>
-					</Card>
+					<Section label="Competition Analysis">
+						<CompetitionScore competition={result.competition} />
+					</Section>
 				)}
 
-				{/* 4. SKILL GAP HEATMAP */}
-				{result.skillGapHeatmap && result.skillGapHeatmap.length > 0 && (
-					<Card className="bg-zinc-900 border-zinc-800">
-						<CardHeader className="pb-2">
-							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
-								🎯 Skill Gap Analysis
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<SkillGapHeatmap skills={result.skillGapHeatmap} />
-						</CardContent>
-					</Card>
+				{/* ── 4. Skill Gap Heatmap ── */}
+				{result.skillGapHeatmap?.length > 0 && (
+					<Section label="Skill Gap Analysis">
+						<SkillGapHeatmap skills={result.skillGapHeatmap} />
+					</Section>
 				)}
 
-				{/* 5. FIX THIS FIRST */}
-				{result.priorities && result.priorities.length > 0 && (
-					<Card className="bg-zinc-900 border-zinc-800">
-						<CardHeader className="pb-2">
-							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
-								🚨 Fix This First
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<PriorityList priorities={result.priorities} />
-						</CardContent>
-					</Card>
+				{/* ── 5. Fix This First ── */}
+				{result.priorities?.length > 0 && (
+					<Section label="Fix This First">
+						<PriorityList priorities={result.priorities} />
+					</Section>
 				)}
 
-				{/* 6. BULLET REWRITE */}
+				{/* ── 6. Bullet Rewrite ── */}
 				{result.bulletRewrite && (
-					<Card className="bg-zinc-900 border-zinc-800">
-						<CardHeader className="pb-2">
-							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
-								✨ Free Rewrite
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<BulletRewriteSection rewrite={result.bulletRewrite} />
-						</CardContent>
-					</Card>
+					<Section label="Free Rewrite">
+						<BulletRewriteSection rewrite={result.bulletRewrite} />
+					</Section>
 				)}
 
-				{/* 7. RECRUITER NOTES */}
-				{result.recruiterNotes && result.recruiterNotes.length > 0 && (
-					<Card className="bg-zinc-900 border-zinc-800">
-						<CardHeader className="pb-2">
-							<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
-								📝 Recruiter Notes
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<RecruiterNotesSection notes={result.recruiterNotes} />
-						</CardContent>
-					</Card>
+				{/* ── 7. Recruiter Notes ── */}
+				{result.recruiterNotes?.length > 0 && (
+					<Section label="Recruiter Notes">
+						<RecruiterNotesSection notes={result.recruiterNotes} />
+					</Section>
 				)}
 
-				{/* 8. THE BRUTAL TRUTH */}
-				<Card className="bg-zinc-900 border-zinc-800">
-					<CardHeader className="pb-2">
-						<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
-							🔥 The Brutal Truth
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<p className="text-zinc-300 whitespace-pre-wrap leading-relaxed">{result.rejection}</p>
-						<div className="bg-zinc-950 rounded-lg p-4 border border-zinc-800">
-							<p className="text-zinc-500 text-xs uppercase tracking-wide mb-2">
-								Hiring manager&apos;s hot take:
-							</p>
-							<p className="text-zinc-300 italic">&ldquo;{result.hiringManagerQuote}&rdquo;</p>
+				{/* ── 8. Brutal Truth ── */}
+				<Section label="The Brutal Truth">
+					<div className="flex flex-col gap-4">
+						<p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">{result.rejection}</p>
+						<div className="bg-surface-raised border border-border rounded px-4 py-4">
+							<span className="font-mono text-[10px] text-muted-foreground tracking-widest block mb-2">HIRING MANAGER&apos;S HOT TAKE</span>
+							<p className="text-muted-foreground text-sm italic">&ldquo;{result.hiringManagerQuote}&rdquo;</p>
 						</div>
-					</CardContent>
-				</Card>
+					</div>
+				</Section>
 
-				{/* 9. HOW TO ACTUALLY GET HIRED */}
-				<Card className="bg-zinc-900 border-zinc-800">
-					<CardHeader className="pb-2">
-						<CardTitle className="text-zinc-100 flex items-center gap-2 text-lg">
-							💡 How to Actually Get Hired
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<ul className="space-y-3">
-							{result.improvements.map((tip: string, i: number) => (
-								<li key={i} className="flex items-start gap-3 text-zinc-300">
-									<span className="bg-green-500/20 text-green-400 rounded-full w-6 h-6 flex items-center justify-center text-sm flex-shrink-0">
-										{i + 1}
-									</span>
-									{tip}
-								</li>
-							))}
-						</ul>
-					</CardContent>
-				</Card>
+				{/* ── 9. How to Get Hired ── */}
+				<Section label="How to Actually Get Hired">
+					<ul className="flex flex-col gap-3">
+						{result.improvements.map((tip: string, i: number) => (
+							<li key={i} className="flex items-start gap-3 text-muted-foreground text-sm">
+								<span className="bg-green-500/20 text-green-400 rounded font-mono text-[10px] font-bold w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">
+									{i + 1}
+								</span>
+								{tip}
+							</li>
+						))}
+					</ul>
+				</Section>
 
-				{/* SHARE SECTION */}
-				<Card className="bg-zinc-900 border-zinc-800">
-					<CardContent className="p-6 space-y-4">
-						<div className="border-t border-zinc-800 pt-4">
-							<p className="text-zinc-400 text-sm text-center mb-3">Share your roast (if you dare)</p>
-							<ShareButtons grade={result.grade} url={`${BASE_URL}/results/${id}`} />
-						</div>
-					</CardContent>
-				</Card>
+				{/* ── Share ── */}
+				<div className="bg-surface border border-border rounded p-5 flex flex-col gap-3">
+					<span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase text-center">Share your roast (if you dare)</span>
+					<ShareButtons grade={result.grade} url={`${BASE_URL}/results/${id}`} />
+				</div>
 
-				{/* CTA */}
-				<div className="text-center pt-6 border-t border-zinc-800">
-					<p className="text-zinc-500 mb-4">Got another rejection to process?</p>
+				{/* ── CTA ── */}
+				<div className="text-center py-6 border-t border-border">
+					<p className="font-mono text-xs text-muted-foreground tracking-wide mb-4">GOT ANOTHER REJECTION TO PROCESS?</p>
 					<Link href="/analyze">
-						<Button className="bg-red-600 hover:bg-red-700">Get Roasted Again</Button>
+						<Button className="bg-primary hover:bg-brand-dim text-primary-foreground font-mono tracking-widest text-xs">
+							GET ROASTED AGAIN
+						</Button>
 					</Link>
 				</div>
 			</div>

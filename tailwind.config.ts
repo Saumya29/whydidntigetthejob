@@ -9,6 +9,10 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-inter)'],
+  			mono: ['var(--font-space-mono)'],
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
@@ -43,13 +47,12 @@ const config: Config = {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
-  			chart: {
-  				'1': 'hsl(var(--chart-1))',
-  				'2': 'hsl(var(--chart-2))',
-  				'3': 'hsl(var(--chart-3))',
-  				'4': 'hsl(var(--chart-4))',
-  				'5': 'hsl(var(--chart-5))'
-  			}
+  			surface: 'hsl(var(--surface))',
+  			'surface-raised': 'hsl(var(--surface-raised))',
+  			'surface-overlay': 'hsl(var(--surface-overlay))',
+  			brand: 'hsl(var(--brand))',
+  			'brand-dim': 'hsl(var(--brand-dim))',
+  			line: 'hsl(var(--line))',
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
