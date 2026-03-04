@@ -255,7 +255,7 @@ Return ONLY a JSON object with these fields:
 				},
 			],
 			temperature: 1,
-			max_tokens: 8192,
+			max_completion_tokens: 8192,
 		});
 
 		let content = completion.choices[0].message.content;
