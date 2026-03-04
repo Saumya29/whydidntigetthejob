@@ -243,7 +243,7 @@ Return ONLY a JSON object with these fields:
 }`;
 
 		const completion = await openai.chat.completions.create({
-			model: "gpt-4o",
+			model: "gpt-5-mini",
 			messages: [
 				{
 					role: "system",
