@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useUser, SignInButton } from "@clerk/nextjs";
+import { useUser, useAuth, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
 const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 function useSafeUser() {
 	if (!isClerkConfigured) {
-		return { isSignedIn: false, isLoaded: true };
+		return { isSignedIn: false, isLoaded: true, getToken: async () => null as string | null };
 	}
 	// eslint-disable-next-line react-hooks/rules-of-hooks
-	return useUser();
+	const user = useUser();
+	// eslint-disable-next-line react-hooks/rules-of-hooks
+	const { getToken } = useAuth();
+	return { ...user, getToken };
 }
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileText, X, Link } from "lucide-react";
@@ -59,7 +62,7 @@ function TabBar({
 }
 
 export default function AnalyzePage() {
-	const { isLoaded, isSignedIn } = useSafeUser();
+	const { isLoaded, isSignedIn, getToken } = useSafeUser();
 
 	const [resume, setResume] = useState("");
 	const [jobDescription, setJobDescription] = useState("");
@@ -236,9 +239,14 @@ export default function AnalyzePage() {
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), 150000);
 		try {
+			// Get a fresh Clerk token to avoid expired session issues
+			const token = await getToken();
 			const res = await fetch("/api/analyze", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
+				},
 				credentials: "include",
 				body: JSON.stringify({ resume, jobDescription }),
 				signal: controller.signal,
