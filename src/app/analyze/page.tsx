@@ -228,11 +228,13 @@ export default function AnalyzePage() {
 			{ msg: "Calculating your competition ranking...", delay: 25000 },
 			{ msg: "Generating ATS compatibility score...", delay: 35000 },
 			{ msg: "Crafting your brutally honest feedback...", delay: 45000 },
-			{ msg: "Almost done, putting the finishing touches...", delay: 55000 },
+			{ msg: "Still working — thorough roasts take time...", delay: 60000 },
+			{ msg: "Wrapping up the analysis...", delay: 80000 },
+			{ msg: "Almost done, putting the finishing touches...", delay: 100000 },
 		];
 		const timers = steps.map((s) => setTimeout(() => setLoadingStep(s.msg), s.delay));
 		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), 90000);
+		const timeout = setTimeout(() => controller.abort(), 150000);
 		try {
 			const res = await fetch("/api/analyze", {
 				method: "POST",
