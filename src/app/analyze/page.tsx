@@ -3,6 +3,16 @@
 import { useState, useCallback, useEffect } from "react";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
+
+const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+function useSafeUser() {
+	if (!isClerkConfigured) {
+		return { isSignedIn: false, isLoaded: true };
+	}
+	// eslint-disable-next-line react-hooks/rules-of-hooks
+	return useUser();
+}
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileText, X, Link } from "lucide-react";
 
@@ -49,7 +59,7 @@ function TabBar({
 }
 
 export default function AnalyzePage() {
-	const { isLoaded, isSignedIn } = useUser();
+	const { isLoaded, isSignedIn } = useSafeUser();
 
 	const [resume, setResume] = useState("");
 	const [jobDescription, setJobDescription] = useState("");
@@ -182,11 +192,19 @@ export default function AnalyzePage() {
 						<h1 className="text-xl font-bold text-foreground">Sign in to get roasted</h1>
 						<p className="text-sm text-muted-foreground">Create a free account and get 3 credits</p>
 					</div>
-					<SignInButton mode="modal">
-						<Button size="lg" className="bg-primary hover:bg-brand-dim text-primary-foreground font-mono tracking-widest text-xs w-full">
-							SIGN IN TO CONTINUE
-						</Button>
-					</SignInButton>
+					{isClerkConfigured ? (
+						<SignInButton mode="modal">
+							<Button size="lg" className="bg-primary hover:bg-brand-dim text-primary-foreground font-mono tracking-widest text-xs w-full">
+								SIGN IN TO CONTINUE
+							</Button>
+						</SignInButton>
+					) : (
+						<a href="/sign-in">
+							<Button size="lg" className="bg-primary hover:bg-brand-dim text-primary-foreground font-mono tracking-widest text-xs w-full">
+								SIGN IN TO CONTINUE
+							</Button>
+						</a>
+					)}
 				</div>
 			</main>
 		);
