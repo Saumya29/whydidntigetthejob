@@ -323,6 +323,8 @@ Return ONLY a JSON object with these fields:
 			}
 		}
 
-		return NextResponse.json({ error: "Analysis failed. Please try again." }, { status: 500 });
+		const message = error instanceof Error ? error.message : "Unknown error";
+		console.error("Unhandled analysis error message:", message);
+		return NextResponse.json({ error: `Analysis failed: ${message}` }, { status: 500 });
 	}
 }
