@@ -262,89 +262,88 @@ Return ONLY a JSON object with these fields:
   "improvements": ["5 specific actionable improvements — each one should reference a concrete change to make, not generic advice like 'tailor your resume'. Example: 'Add a Projects section showcasing a distributed systems project since the JD emphasizes microservices experience you claim but don't demonstrate'"]
 }`;
 
-		const completion = await openai.chat.completions.create({
-			model: "gpt-5-mini",
-			messages: [
-				{
-					role: "system",
-					content: `You are a brutally honest hiring expert. Today's date is ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}. Respond with valid JSON only. No markdown, no code fences, no extra text.`,
-				},
-				{
-					role: "user",
-					content: prompt,
-				},
-			],
-			temperature: 1,
-			max_completion_tokens: 8192,
+		// Stream response with heartbeats to prevent timeout
+		const encoder = new TextEncoder();
+		const stream = new ReadableStream({
+			async start(controller) {
+				const heartbeat = setInterval(() => {
+					controller.enqueue(encoder.encode("\n"));
+				}, 10000);
+
+				try {
+					const completion = await openai.chat.completions.create({
+						model: "gpt-5-mini",
+						messages: [
+							{
+								role: "system",
+								content: `You are a brutally honest hiring expert. Today's date is ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}. Respond with valid JSON only.`,
+							},
+							{
+								role: "user",
+								content: prompt,
+							},
+						],
+						temperature: 1,
+						max_completion_tokens: 8192,
+						response_format: { type: "json_object" },
+					});
+
+					const content = completion.choices[0].message.content;
+					if (!content) {
+						throw new Error("No response from AI");
+					}
+
+					const analysis: Record<string, unknown> = JSON.parse(content);
+					const resultId = nanoid(10);
+
+					// Sanitize AI output to match Convex schema validators
+					const sanitized = sanitizeAnalysis(analysis);
+
+					const result = {
+						resultId,
+						clerkId: userId,
+						email,
+						...sanitized,
+					};
+
+					// Save to Convex
+					await convex.mutation(api.results.save, result);
+
+					// Use a roast
+					const roastResult = await convex.mutation(api.users.useRoast, { clerkId: userId });
+
+					// Send final JSON result
+					controller.enqueue(encoder.encode(JSON.stringify({ id: resultId, remaining: roastResult.remaining })));
+				} catch (error) {
+					console.error("Analysis error:", error);
+					let errorMsg = "Analysis failed. Please try again.";
+					if (error instanceof Error) {
+						if (error.message.includes("API key")) {
+							errorMsg = "AI service configuration error. Please try again later.";
+						} else if (error.message.includes("quota") || error.message.includes("rate")) {
+							errorMsg = "AI rate limit reached. Try again in a minute.";
+						} else {
+							errorMsg = `Analysis failed: ${error.message}`;
+						}
+					}
+					controller.enqueue(encoder.encode(JSON.stringify({ error: errorMsg })));
+				} finally {
+					clearInterval(heartbeat);
+					controller.close();
+				}
+			},
 		});
 
-		let content = completion.choices[0].message.content;
-		if (!content) {
-			throw new Error("No response from AI");
-		}
-
-		// Strip markdown code fences and any surrounding text
-		content = content.trim();
-		if (content.startsWith("```")) {
-			content = content.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-		}
-		// Extract JSON object even if wrapped in extra text
-		const jsonMatch = content.match(/\{[\s\S]*\}/);
-		if (!jsonMatch) {
-			console.error("No JSON object found in AI response:", content.slice(0, 500));
-			throw new Error("JSON");
-		}
-
-		let analysis: Record<string, unknown>;
-		try {
-			analysis = JSON.parse(jsonMatch[0]);
-		} catch {
-			// Try fixing common JSON issues: trailing commas, single quotes
-			const cleaned = jsonMatch[0]
-				.replace(/,\s*([}\]])/g, "$1")
-				.replace(/'/g, '"');
-			analysis = JSON.parse(cleaned);
-		}
-		const resultId = nanoid(10);
-
-		// Sanitize AI output to match Convex schema validators
-		const sanitized = sanitizeAnalysis(analysis);
-
-		const result = {
-			resultId,
-			clerkId: userId,
-			email,
-			...sanitized,
-		};
-
-		// Save to Convex
-		await convex.mutation(api.results.save, result);
-
-		// Use a roast
-		const roastResult = await convex.mutation(api.users.useRoast, { clerkId: userId });
-
-		// Return the result ID for redirect
-		return NextResponse.json({ 
-			id: resultId,
-			remaining: roastResult.remaining,
+		return new Response(stream, {
+			headers: {
+				"Content-Type": "text/plain; charset=utf-8",
+				"Cache-Control": "no-cache",
+				"Transfer-Encoding": "chunked",
+			},
 		});
 	} catch (error) {
 		console.error("Analysis error:", error);
-
-		if (error instanceof Error) {
-			if (error.message.includes("API key")) {
-				return NextResponse.json({ error: "AI service configuration error. Please try again later." }, { status: 500 });
-			}
-			if (error.message.includes("quota") || error.message.includes("rate")) {
-				return NextResponse.json({ error: "AI rate limit reached. Try again in a minute." }, { status: 429 });
-			}
-			if (error.message.includes("JSON")) {
-				return NextResponse.json({ error: "AI returned an unexpected response. Please try again." }, { status: 500 });
-			}
-		}
-
 		const message = error instanceof Error ? error.message : "Unknown error";
-		console.error("Unhandled analysis error message:", message);
 		return NextResponse.json({ error: `Analysis failed: ${message}` }, { status: 500 });
 	}
 }

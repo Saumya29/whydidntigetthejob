@@ -236,8 +236,6 @@ export default function AnalyzePage() {
 			{ msg: "Almost done, putting the finishing touches...", delay: 100000 },
 		];
 		const timers = steps.map((s) => setTimeout(() => setLoadingStep(s.msg), s.delay));
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), 150000);
 		try {
 			// Get a fresh Clerk token to avoid expired session issues
 			const token = await getToken();
@@ -249,45 +247,51 @@ export default function AnalyzePage() {
 				},
 				credentials: "include",
 				body: JSON.stringify({ resume, jobDescription }),
-				signal: controller.signal,
 			});
-			clearTimeout(timeout);
 
-			// Try to parse JSON — if it fails, it's a non-JSON response (e.g. timeout HTML page)
-			let data: { id?: string; remaining?: number; needsPayment?: boolean; error?: string };
-			try {
-				data = await res.json();
-			} catch {
-				setError("The server returned an unexpected response. Please try again.");
+			// Non-streaming error responses (auth, rate limit, payment, etc.)
+			if (!res.ok) {
+				let data: { error?: string; needsPayment?: boolean };
+				try {
+					data = await res.json();
+				} catch {
+					setError("The server returned an unexpected response. Please try again.");
+					return;
+				}
+				if (res.status === 401) {
+					window.location.href = "/sign-in?redirect_url=/analyze";
+					return;
+				}
+				if (data.needsPayment) {
+					setRoastsRemaining(0);
+					setError("No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits.");
+				} else {
+					setError(data.error || "Analysis failed. Please try again.");
+				}
 				return;
 			}
 
-			// Success — redirect to results
+			// Streaming response — parse last non-empty line as JSON
+			const text = await res.text();
+			const lines = text.split("\n").filter((l) => l.trim().length > 0);
+			const lastLine = lines[lines.length - 1];
+			if (!lastLine) {
+				setError("The server returned an empty response. Please try again.");
+				return;
+			}
+
+			const data: { id?: string; remaining?: number; error?: string } = JSON.parse(lastLine);
+
 			if (data.id) {
 				if (data.remaining !== undefined) setRoastsRemaining(data.remaining);
 				window.location.href = `/results/${data.id}`;
 				return;
 			}
 
-			// Error responses
-			if (res.status === 401) {
-				window.location.href = "/sign-in?redirect_url=/analyze";
-				return;
-			}
-			if (data.needsPayment) {
-				setRoastsRemaining(0);
-				setError("No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits.");
-			} else {
-				setError(data.error || "Analysis failed. Please try again.");
-			}
-		} catch (err) {
-			if (err instanceof DOMException && err.name === "AbortError") {
-				setError("The analysis is taking too long. Please try again.");
-			} else {
-				setError("Something went wrong. Please check your connection and try again.");
-			}
+			setError(data.error || "Analysis failed. Please try again.");
+		} catch {
+			setError("Something went wrong. Please check your connection and try again.");
 		} finally {
-			clearTimeout(timeout);
 			for (const t of timers) clearTimeout(t);
 			setLoading(false);
 			setLoadingStep("");
