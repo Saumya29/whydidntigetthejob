@@ -143,7 +143,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<AuthWrapper>
-			<html lang="en" className={`${_inter.variable} ${_spaceMono.variable}`}>
+			<html lang="en" className={`dark ${_inter.variable} ${_spaceMono.variable}`}>
 				<body className="font-sans bg-background text-foreground min-h-screen antialiased">
 					<ConvexClientProvider>
 						<Header />
