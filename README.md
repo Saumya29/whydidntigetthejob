@@ -4,6 +4,12 @@
 
 Paste your resume and job description. Get brutal AI feedback on why you didn't get the job.
 
+## Demo
+
+<video src="demo.mp4" width="100%" autoplay loop muted playsinline></video>
+
+![Demo](demo.gif)
+
 ## Features
 
 - 🔥 Brutal but constructive AI feedback
