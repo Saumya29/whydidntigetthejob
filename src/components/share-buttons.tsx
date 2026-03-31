@@ -1,8 +1,9 @@
 "use client";
 
+import { Check, Copy, Linkedin } from "lucide-react";
+import { usePostHog } from "posthog-js/react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, Linkedin } from "lucide-react";
 
 interface ShareButtonsProps {
 	grade: string;
@@ -20,6 +21,7 @@ function XIcon({ className }: { className?: string }) {
 
 export function ShareButtons({ grade, url }: ShareButtonsProps) {
 	const [copied, setCopied] = useState(false);
+	const posthog = usePostHog();
 
 	// Different messages based on grade
 	const getShareText = () => {
@@ -43,17 +45,20 @@ export function ShareButtons({ grade, url }: ShareButtonsProps) {
 	const linkedInText = `I got roasted by AI on my job application. Grade: ${grade}. Find out why you keep getting rejected!`;
 
 	const shareTwitter = () => {
+		posthog?.capture("result_shared", { platform: "twitter", grade });
 		const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(url)}`;
 		window.open(twitterUrl, "_blank", "noopener,noreferrer,width=550,height=420");
 	};
 
 	const shareLinkedIn = () => {
+		posthog?.capture("result_shared", { platform: "linkedin", grade });
 		// LinkedIn only takes URL, the preview will show OG tags
 		const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
 		window.open(linkedInUrl, "_blank", "noopener,noreferrer,width=550,height=420");
 	};
 
 	const copyLink = async () => {
+		posthog?.capture("result_shared", { platform: "copy_link", grade });
 		try {
 			await navigator.clipboard.writeText(url);
 			setCopied(true);

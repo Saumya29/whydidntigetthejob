@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useUser, useAuth, SignInButton } from "@clerk/nextjs";
+import { SignInButton, useAuth, useUser } from "@clerk/nextjs";
+import { usePostHog } from "posthog-js/react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -16,14 +17,27 @@ function useSafeUser() {
 	const { getToken } = useAuth();
 	return { ...user, getToken };
 }
+
+import { FileText, Link, Upload, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, FileText, X, Link } from "lucide-react";
 
 function Spinner({ className = "h-5 w-5" }: { className?: string }) {
 	return (
 		<svg className={`animate-spin ${className}`} viewBox="0 0 24 24">
-			<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-			<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+			<circle
+				className="opacity-25"
+				cx="12"
+				cy="12"
+				r="10"
+				stroke="currentColor"
+				strokeWidth="4"
+				fill="none"
+			/>
+			<path
+				className="opacity-75"
+				fill="currentColor"
+				d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+			/>
 		</svg>
 	);
 }
@@ -45,16 +59,12 @@ function TabBar({
 					type="button"
 					onClick={() => onChange(t.id)}
 					className={`relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-mono tracking-wide transition-colors ${
-						active === t.id
-							? "text-primary"
-							: "text-muted-foreground hover:text-foreground"
+						active === t.id ? "text-primary" : "text-muted-foreground hover:text-foreground"
 					}`}
 				>
 					{t.icon}
 					{t.label}
-					{active === t.id && (
-						<span className="absolute bottom-0 left-0 right-0 h-px bg-primary" />
-					)}
+					{active === t.id && <span className="absolute bottom-0 left-0 right-0 h-px bg-primary" />}
 				</button>
 			))}
 		</div>
@@ -63,6 +73,7 @@ function TabBar({
 
 export default function AnalyzePage() {
 	const { isLoaded, isSignedIn, getToken } = useSafeUser();
+	const posthog = usePostHog();
 
 	const [resume, setResume] = useState("");
 	const [jobDescription, setJobDescription] = useState("");
@@ -135,13 +146,16 @@ export default function AnalyzePage() {
 		else if (e.type === "dragleave") setDragActive(false);
 	}, []);
 
-	const handleDrop = useCallback((e: React.DragEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		setDragActive(false);
-		const file = e.dataTransfer.files?.[0];
-		if (file) processFile(file);
-	}, [processFile]);
+	const handleDrop = useCallback(
+		(e: React.DragEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			setDragActive(false);
+			const file = e.dataTransfer.files?.[0];
+			if (file) processFile(file);
+		},
+		[processFile],
+	);
 
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -197,13 +211,19 @@ export default function AnalyzePage() {
 					</div>
 					{isClerkConfigured ? (
 						<SignInButton mode="modal">
-							<Button size="lg" className="bg-primary hover:bg-brand-dim text-primary-foreground font-mono tracking-widest text-xs w-full">
+							<Button
+								size="lg"
+								className="bg-primary hover:bg-brand-dim text-primary-foreground font-mono tracking-widest text-xs w-full"
+							>
 								SIGN IN TO CONTINUE
 							</Button>
 						</SignInButton>
 					) : (
 						<a href="/sign-in">
-							<Button size="lg" className="bg-primary hover:bg-brand-dim text-primary-foreground font-mono tracking-widest text-xs w-full">
+							<Button
+								size="lg"
+								className="bg-primary hover:bg-brand-dim text-primary-foreground font-mono tracking-widest text-xs w-full"
+							>
 								SIGN IN TO CONTINUE
 							</Button>
 						</a>
@@ -222,6 +242,7 @@ export default function AnalyzePage() {
 		setLoading(true);
 		setError(null);
 		setLoadingStep("Submitting your application...");
+		posthog?.capture("analysis_started");
 		const steps = [
 			{ msg: "Reading your resume...", delay: 2000 },
 			{ msg: "Analyzing the job requirements...", delay: 4000 },
@@ -264,7 +285,7 @@ export default function AnalyzePage() {
 				}
 				if (data.needsPayment) {
 					setRoastsRemaining(0);
-					setError("No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits.");
+					setError("You've used all your free credits. More credits coming soon!");
 				} else {
 					setError(data.error || "Analysis failed. Please try again.");
 				}
@@ -290,6 +311,7 @@ export default function AnalyzePage() {
 
 			if (data.id) {
 				if (data.remaining !== undefined) setRoastsRemaining(data.remaining);
+				posthog?.capture("analysis_completed", { result_id: data.id });
 				window.location.href = `/results/${data.id}`;
 				return;
 			}
@@ -316,37 +338,39 @@ export default function AnalyzePage() {
 	return (
 		<main className="px-4 py-10 md:py-14">
 			<div className="w-full max-w-5xl mx-auto flex flex-col gap-8">
-
 				{/* Page header */}
 				<div className="flex flex-col gap-4">
 					<div className="flex items-center gap-3">
 						<div className="h-px flex-1 bg-border" />
-						<span className="font-mono text-xs text-muted-foreground tracking-widest uppercase">Submit for roasting</span>
+						<span className="font-mono text-xs text-muted-foreground tracking-widest uppercase">
+							Submit for roasting
+						</span>
 						<div className="h-px flex-1 bg-border" />
 					</div>
 					<div className="text-center space-y-2">
 						<h1 className="text-4xl md:text-5xl font-black tracking-tight text-balance">
 							Time for your <span className="text-primary">verdict</span>
 						</h1>
-						<p className="text-muted-foreground text-base">Upload your resume and paste the job description below</p>
+						<p className="text-muted-foreground text-base">
+							Upload your resume and paste the job description below
+						</p>
 					</div>
 					{roastsRemaining !== null && (
 						<div className="flex justify-center">
-							<div className={`inline-flex items-center gap-2 border rounded px-4 py-2 font-mono text-xs tracking-wide ${
-								roastsRemaining > 0
-									? "border-border text-muted-foreground bg-surface"
-									: "border-primary/30 text-primary bg-primary/10"
-							}`}>
-								<span className={`w-1.5 h-1.5 rounded-full ${roastsRemaining > 0 ? "bg-muted-foreground" : "bg-primary"}`} />
-								<span className="text-foreground font-bold">{roastsRemaining}</span>
-								{" "}CREDIT{roastsRemaining !== 1 ? "S" : ""} REMAINING
+							<div
+								className={`inline-flex items-center gap-2 border rounded px-4 py-2 font-mono text-xs tracking-wide ${
+									roastsRemaining > 0
+										? "border-border text-muted-foreground bg-surface"
+										: "border-primary/30 text-primary bg-primary/10"
+								}`}
+							>
+								<span
+									className={`w-1.5 h-1.5 rounded-full ${roastsRemaining > 0 ? "bg-muted-foreground" : "bg-primary"}`}
+								/>
+								<span className="text-foreground font-bold">{roastsRemaining}</span> CREDIT
+								{roastsRemaining !== 1 ? "S" : ""} REMAINING
 								{roastsRemaining === 0 && (
-									<>
-										{" "}—{" "}
-										<a href="mailto:saumyatiwari.29@gmail.com" className="text-primary hover:underline">
-											GET MORE
-										</a>
-									</>
+									<span className="text-primary/70"> — more coming soon</span>
 								)}
 							</div>
 						</div>
@@ -356,11 +380,12 @@ export default function AnalyzePage() {
 				{/* Form */}
 				<form onSubmit={handleSubmit} className="flex flex-col gap-6">
 					<div className="grid md:grid-cols-2 gap-4">
-
 						{/* ── Resume column ── */}
 						<div className="bg-surface border border-border rounded flex flex-col overflow-hidden">
 							<div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-border">
-								<span className="font-mono text-xs text-foreground tracking-wide font-bold">RESUME</span>
+								<span className="font-mono text-xs text-foreground tracking-wide font-bold">
+									RESUME
+								</span>
 								<span className="font-mono text-[10px] text-muted-foreground">
 									{resume.length > 0 ? `${resume.length} chars` : "Required"}
 								</span>
@@ -401,9 +426,14 @@ export default function AnalyzePage() {
 												{uploading ? (
 													<div className="flex flex-col items-center gap-4">
 														<Spinner className="h-8 w-8 text-primary" />
-														<p className="font-mono text-xs text-muted-foreground tracking-wide">{uploadProgress || "UPLOADING..."}</p>
+														<p className="font-mono text-xs text-muted-foreground tracking-wide">
+															{uploadProgress || "UPLOADING..."}
+														</p>
 														<div className="w-40 h-0.5 bg-surface-overlay rounded overflow-hidden">
-															<div className="h-full bg-primary rounded animate-pulse" style={{ width: "70%" }} />
+															<div
+																className="h-full bg-primary rounded animate-pulse"
+																style={{ width: "70%" }}
+															/>
 														</div>
 													</div>
 												) : (
@@ -412,8 +442,12 @@ export default function AnalyzePage() {
 															<Upload className="w-5 h-5 text-muted-foreground" />
 														</div>
 														<div className="text-center">
-															<p className="text-foreground text-sm font-medium">Drop your resume PDF here</p>
-															<p className="font-mono text-[10px] text-muted-foreground tracking-wide mt-1">OR CLICK TO BROWSE — MAX 5MB</p>
+															<p className="text-foreground text-sm font-medium">
+																Drop your resume PDF here
+															</p>
+															<p className="font-mono text-[10px] text-muted-foreground tracking-wide mt-1">
+																OR CLICK TO BROWSE — MAX 5MB
+															</p>
 														</div>
 													</div>
 												)}
@@ -424,8 +458,12 @@ export default function AnalyzePage() {
 													<div className="flex items-center gap-2.5">
 														<FileText className="w-4 h-4 text-primary flex-shrink-0" />
 														<div>
-															<p className="text-xs text-foreground font-medium truncate max-w-[180px]">{uploadedFile.name}</p>
-															<p className="font-mono text-[10px] text-muted-foreground">{(uploadedFile.size / 1024).toFixed(1)} KB</p>
+															<p className="text-xs text-foreground font-medium truncate max-w-[180px]">
+																{uploadedFile.name}
+															</p>
+															<p className="font-mono text-[10px] text-muted-foreground">
+																{(uploadedFile.size / 1024).toFixed(1)} KB
+															</p>
 														</div>
 													</div>
 													<button
@@ -462,7 +500,9 @@ export default function AnalyzePage() {
 						{/* ── Job Description column ── */}
 						<div className="bg-surface border border-border rounded flex flex-col overflow-hidden">
 							<div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-border">
-								<span className="font-mono text-xs text-foreground tracking-wide font-bold">JOB DESCRIPTION</span>
+								<span className="font-mono text-xs text-foreground tracking-wide font-bold">
+									JOB DESCRIPTION
+								</span>
 								<span className="font-mono text-[10px] text-muted-foreground">
 									{jobDescription.length > 0 ? `${jobDescription.length} chars` : "Required"}
 								</span>
@@ -521,17 +561,25 @@ export default function AnalyzePage() {
 												className="min-h-[230px] bg-background border-border text-foreground text-xs leading-relaxed resize-none cursor-default font-mono"
 											/>
 										) : (
-											<div className={`min-h-[230px] flex items-center justify-center border-2 border-dashed rounded transition-colors ${fetchingJd ? "border-primary/30" : "border-border"} bg-background`}>
+											<div
+												className={`min-h-[230px] flex items-center justify-center border-2 border-dashed rounded transition-colors ${fetchingJd ? "border-primary/30" : "border-border"} bg-background`}
+											>
 												{fetchingJd ? (
 													<div className="flex flex-col items-center gap-3">
 														<Spinner className="h-6 w-6 text-primary" />
-														<p className="font-mono text-xs text-muted-foreground tracking-wide">FETCHING...</p>
+														<p className="font-mono text-xs text-muted-foreground tracking-wide">
+															FETCHING...
+														</p>
 													</div>
 												) : (
 													<div className="text-center">
 														<Link className="w-7 h-7 mx-auto mb-2 text-muted-foreground/40" />
-														<p className="font-mono text-xs text-muted-foreground tracking-wide">PASTE A JOB URL ABOVE</p>
-														<p className="font-mono text-[10px] text-muted-foreground/60 mt-1 tracking-wide">LINKEDIN, INDEED, GREENHOUSE, ETC.</p>
+														<p className="font-mono text-xs text-muted-foreground tracking-wide">
+															PASTE A JOB URL ABOVE
+														</p>
+														<p className="font-mono text-[10px] text-muted-foreground/60 mt-1 tracking-wide">
+															LINKEDIN, INDEED, GREENHOUSE, ETC.
+														</p>
 													</div>
 												)}
 											</div>
@@ -568,8 +616,12 @@ export default function AnalyzePage() {
 
 					{/* Tips */}
 					<div className="flex flex-wrap justify-center gap-x-6 gap-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground tracking-wide">PDF upload extracts text automatically</span>
-						<span className="font-mono text-[10px] text-muted-foreground tracking-wide">Paste a job posting URL or the full text</span>
+						<span className="font-mono text-[10px] text-muted-foreground tracking-wide">
+							PDF upload extracts text automatically
+						</span>
+						<span className="font-mono text-[10px] text-muted-foreground tracking-wide">
+							Paste a job posting URL or the full text
+						</span>
 					</div>
 				</form>
 			</div>

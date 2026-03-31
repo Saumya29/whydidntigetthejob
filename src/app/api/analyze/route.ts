@@ -1,10 +1,10 @@
+import { auth, currentUser, verifyToken } from "@clerk/nextjs/server";
+import { ConvexHttpClient } from "convex/browser";
 import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { auth, currentUser, verifyToken } from "@clerk/nextjs/server";
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "../../../../convex/_generated/api";
 import { checkRateLimit, getIP } from "@/lib/rate-limit";
+import { api } from "../../../../convex/_generated/api";
 
 export const maxDuration = 300;
 
@@ -116,14 +116,14 @@ export async function POST(request: NextRequest) {
 		// Rate limiting
 		const ip = getIP(request);
 		const rateLimitResult = await checkRateLimit(`analyze:${ip}`);
-		
+
 		if (!rateLimitResult.success) {
 			return NextResponse.json(
-				{ 
+				{
 					error: "Too many requests. Please wait a minute before trying again.",
 					retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
 				},
-				{ 
+				{
 					status: 429,
 					headers: {
 						"X-RateLimit-Limit": rateLimitResult.limit.toString(),
@@ -212,7 +212,10 @@ export async function POST(request: NextRequest) {
 
 		if (!dbUser || dbUser.roastsRemaining <= 0) {
 			return NextResponse.json(
-				{ needsPayment: true, error: "No credits remaining. Contact us at saumyatiwari.29@gmail.com for more credits." },
+				{
+					needsPayment: true,
+					error: "You've used all your free credits. More credits coming soon!",
+				},
 				{ status: 402 },
 			);
 		}
@@ -313,7 +316,9 @@ Return ONLY a JSON object with these fields:
 					]);
 
 					// Send final JSON result
-					controller.enqueue(encoder.encode(JSON.stringify({ id: resultId, remaining: roastResult.remaining })));
+					controller.enqueue(
+						encoder.encode(JSON.stringify({ id: resultId, remaining: roastResult.remaining })),
+					);
 				} catch (error) {
 					console.error("Analysis error:", error);
 					let errorMsg = "Analysis failed. Please try again.";

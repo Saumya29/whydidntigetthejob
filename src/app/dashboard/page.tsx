@@ -1,9 +1,9 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { ConvexHttpClient } from "convex/browser";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../convex/_generated/api";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
@@ -48,13 +48,7 @@ export default async function DashboardPage() {
 						{roastsRemaining === 0 && (
 							<div className="mt-2">
 								<p className="text-red-400 text-sm">No credits remaining</p>
-								<p className="text-zinc-500 text-xs mt-1">
-									Contact{" "}
-									<a href="mailto:saumyatiwari.29@gmail.com" className="text-red-400 hover:underline">
-										saumyatiwari.29@gmail.com
-									</a>
-									{" "}for more
-								</p>
+								<p className="text-zinc-500 text-xs mt-1">More credits coming soon</p>
 							</div>
 						)}
 					</div>
@@ -81,11 +75,9 @@ export default async function DashboardPage() {
 					<h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
 					<div className="flex flex-wrap gap-3">
 						<Link href="/analyze">
-							<Button className="bg-red-600 hover:bg-red-700">
-								🔥 New Roast
-							</Button>
+							<Button className="bg-red-600 hover:bg-red-700">🔥 New Roast</Button>
 						</Link>
-						</div>
+					</div>
 				</div>
 
 				{/* Roast History */}
@@ -122,9 +114,7 @@ export default async function DashboardPage() {
 							<p className="text-zinc-400 mb-2">No roasts yet</p>
 							<p className="text-zinc-500 text-sm mb-4">Get your first resume roasted!</p>
 							<Link href="/analyze">
-								<Button className="bg-red-600 hover:bg-red-700">
-									Get Roasted 🔥
-								</Button>
+								<Button className="bg-red-600 hover:bg-red-700">Get Roasted 🔥</Button>
 							</Link>
 						</div>
 					)}

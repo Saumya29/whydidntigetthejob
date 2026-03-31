@@ -4,10 +4,7 @@ import { NextResponse } from "next/server";
 const isClerkConfigured = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 // Routes that require authentication
-const isProtectedRoute = createRouteMatcher([
-	"/dashboard(.*)",
-	"/api/user/(.*)",
-]);
+const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/api/user/(.*)"]);
 
 // Routes that are always public
 const isPublicRoute = createRouteMatcher([
@@ -21,6 +18,8 @@ const isPublicRoute = createRouteMatcher([
 	"/api/pdf/(.*)",
 	"/api/admin/(.*)",
 	"/api/user/check", // Allow unauthenticated users to check/create account
+	"/privacy(.*)",
+	"/terms(.*)",
 ]);
 
 export default isClerkConfigured

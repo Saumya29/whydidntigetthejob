@@ -27,6 +27,7 @@
 		"nanoid": "^5.1.6",
 		"next": "14.2.35",
 		"openai": "^6.18.0",
+		"posthog-js": "^1.364.3",
 		"react": "^18",
 		"react-dom": "^18",
 		"tailwind-merge": "^3.4.0",
