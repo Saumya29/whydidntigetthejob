@@ -15,7 +15,7 @@ const _spaceMono = Space_Mono({
 	variable: "--font-space-mono",
 });
 
-const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://whydidntigetthejob.com";
+const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://roast.saumyatiwari.com";
 
 export const viewport: Viewport = {
 	themeColor: "#dc2626",
@@ -26,8 +26,8 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
 	metadataBase: new URL(BASE_URL),
 	title: {
-		default: "WhyDidntIGetTheJob - The rejection letter you deserved",
-		template: "%s | WhyDidntIGetTheJob",
+		default: "RoastMyResume - The rejection letter you deserved",
+		template: "%s | RoastMyResume",
 	},
 	description:
 		"Paste your resume and job description. Get brutally honest AI feedback on exactly why you didn't get hired. 3 free roasts, no credit card required.",
@@ -40,27 +40,27 @@ export const metadata: Metadata = {
 		"job search",
 		"resume roast",
 	],
-	authors: [{ name: "WhyDidntIGetTheJob" }],
-	creator: "WhyDidntIGetTheJob",
+	authors: [{ name: "RoastMyResume" }],
+	creator: "RoastMyResume",
 	openGraph: {
 		type: "website",
 		locale: "en_US",
 		url: BASE_URL,
-		siteName: "WhyDidntIGetTheJob",
-		title: "WhyDidntIGetTheJob - The rejection letter you deserved",
+		siteName: "RoastMyResume",
+		title: "RoastMyResume - The rejection letter you deserved",
 		description: "Get brutally honest AI feedback on why you didn't get the job. 3 free roasts.",
 		images: [
 			{
 				url: `${BASE_URL}/og-image.png`,
 				width: 1200,
 				height: 630,
-				alt: "WhyDidntIGetTheJob - Get your resume roasted",
+				alt: "RoastMyResume - Get your resume roasted",
 			},
 		],
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "WhyDidntIGetTheJob",
+		title: "RoastMyResume",
 		description: "The rejection letter you deserved but never got. Get roasted free.",
 		images: [`${BASE_URL}/og-image.png`],
 		creator: "@whydidntigetit",
